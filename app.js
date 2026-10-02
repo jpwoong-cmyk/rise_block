@@ -114,9 +114,49 @@
     })[status] || status;
   }
 
+  const summaryCounterFrames = new WeakMap();
+  const summaryReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+
+  function animateSummaryNumber(id, target) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const end = Math.max(0, Math.round(Number(target) || 0));
+    const oldFrame = summaryCounterFrames.get(el);
+    if (oldFrame) cancelAnimationFrame(oldFrame);
+
+    if (summaryReducedMotion?.matches) {
+      el.textContent = end.toLocaleString('en-SG');
+      summaryCounterFrames.delete(el);
+      return;
+    }
+
+    const startedAt = performance.now();
+    const duration = end >= 1000 ? 950 : end >= 100 ? 800 : 600;
+    el.textContent = '0';
+
+    function step(now) {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = progress >= 1 ? end : Math.floor(end * eased);
+      el.textContent = current.toLocaleString('en-SG');
+
+      if (progress < 1) {
+        const frame = requestAnimationFrame(step);
+        summaryCounterFrames.set(el, frame);
+      } else {
+        el.textContent = end.toLocaleString('en-SG');
+        summaryCounterFrames.delete(el);
+      }
+    }
+
+    const frame = requestAnimationFrame(step);
+    summaryCounterFrames.set(el, frame);
+  }
+
   function updateSummary() {
     const c = statusCounts();
-        const availableByType = {
+    const availableByType = {
       '2R-T1': 0,
       '2R-T2': 0,
       '3R': 0,
@@ -129,17 +169,17 @@
       }
     }
 
-    document.getElementById('totalUnits').textContent = units.length.toLocaleString();
-    document.getElementById('availableUnits').textContent = availableCount(c).toLocaleString();
-    document.getElementById('reportedUnits').textContent = c.reported_taken.toLocaleString();
-    document.getElementById('takenUnits').textContent = c.confirmed_taken.toLocaleString();
-    document.getElementById('available2RT1').textContent = availableByType['2R-T1'].toLocaleString();
-    document.getElementById('available2RT2').textContent = availableByType['2R-T2'].toLocaleString();
-    document.getElementById('available3R').textContent = availableByType['3R'].toLocaleString();
-    document.getElementById('available4R').textContent = availableByType['4R'].toLocaleString();
+    animateSummaryNumber('totalUnits', units.length);
+    animateSummaryNumber('availableUnits', availableCount(c));
+    animateSummaryNumber('reportedUnits', c.reported_taken);
+    animateSummaryNumber('takenUnits', c.confirmed_taken);
+    animateSummaryNumber('available2RT1', availableByType['2R-T1']);
+    animateSummaryNumber('available2RT2', availableByType['2R-T2']);
+    animateSummaryNumber('available3R', availableByType['3R']);
+    animateSummaryNumber('available4R', availableByType['4R']);
     if (window.__berlayarRefreshBlockLabels) window.__berlayarRefreshBlockLabels();
   }
-  updateSummary();
+  // Summary numbers begin at 0 in HTML and animate after live status data loads.
 
   // ---------- DOM: drawers/dialogs ----------
   const blockDrawer = document.getElementById('blockDrawer');
@@ -664,6 +704,7 @@
   async function connectCommunityData() {
     const cfg = window.BERLAYAR_COMMUNITY;
     if (!cfg?.url || !cfg?.publishableKey) {
+      updateSummary();
       setDbStatus('Community updates are unavailable.', true);
       return;
     }
@@ -673,6 +714,7 @@
       await refreshCommunityData();
     } catch (err) {
       console.error('Community data connection failed:', err);
+      updateSummary();
       const message = String(err?.message || err || 'Connection error');
       if (/schema|exposed|profile/i.test(message)) {
         setDbStatus('Community updates are temporarily unavailable.', true);

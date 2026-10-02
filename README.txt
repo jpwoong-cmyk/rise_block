@@ -1,22 +1,16 @@
-RiseBlock mobile pointer blur
+RiseBlock running-number update
 
-Replace the existing root files:
-- quota-queue-v2.js
-- quota-queue-v2.css
+Replace these files:
+- index.html
+- app.js
 
-No Supabase change.
-No index.html change.
-No app.js/styles.css change.
+styles.css is intentionally NOT changed in this update. Your current GitHub styles.css already contains the 8-cell T1/T2 summary layout.
 
-Mobile behaviour:
-- Block pointers such as 200A / 201A / 204A stay normal while outside the
-  "Explore the precinct" rectangle.
-- The moment a pointer overlaps that card, it gets:
-    opacity: 40%
-    blur: 2px
-  This is the requested roughly 60% visual fade/blur treatment.
-- While overlapped, the pointer does not intercept taps, so controls inside
-  the card remain usable.
-- The effect updates continuously while the 3D camera moves.
-
-Map Layers remains above the pointers.
+Behaviour:
+- Summary values start visually at 0.
+- Once live Supabase unit statuses load, every summary number counts up from 0 to its real current value.
+- If Available is 1,975, it ends at 1,975, never 1,976.
+- 2R-T1, 2R-T2, 3R and 4R each animate to their own current available count.
+- Reported taken and Confirmed taken animate too.
+- Whenever updateSummary() runs after a status change, the counters restart at 0 and count to the newly calculated live value.
+- Reduced-motion users get the final number immediately instead of animation.
