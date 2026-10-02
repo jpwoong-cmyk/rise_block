@@ -21,7 +21,7 @@ window.BERLAYAR_DATA = {
     totalUnits: 1976,
     residentialBlocks: 6,
     subsidyRecoveryPct: 14,
-    statusBaseline: "untracked",
+    statusBaseline: "available",
     note: "Community tracker; not affiliated with HDB. No Singpass access and no HDB live-availability feed.",
     geometryNote: "Estate geometry is a source-plan sketch for orientation, not a survey or BIM model."
   },

@@ -81,6 +81,7 @@
       acc[u.status] = (acc[u.status] || 0) + 1;
       return acc;
     }, {
+      available:0,
       untracked:0,
       reported_available:0,
       confirmed_available:0,
@@ -90,13 +91,25 @@
     });
   }
 
+  function isAvailableStatus(status) {
+    return ['available', 'untracked', 'reported_available', 'confirmed_available'].includes(status);
+  }
+
+  function availableCount(counts) {
+    return (counts.available || 0)
+      + (counts.untracked || 0)
+      + (counts.reported_available || 0)
+      + (counts.confirmed_available || 0);
+  }
+
   function statusLabel(status) {
     return ({
-      untracked: 'Untracked',
-      reported_available: 'Reported available',
-      confirmed_available: 'Community-confirmed available',
+      available: 'Available',
+      untracked: 'Available',
+      reported_available: 'Available',
+      confirmed_available: 'Available',
       reported_taken: 'Reported taken',
-      confirmed_taken: 'Community-confirmed taken',
+      confirmed_taken: 'Taken',
       conflicting: 'Conflicting reports'
     })[status] || status;
   }
@@ -104,7 +117,7 @@
   function updateSummary() {
     const c = statusCounts();
     document.getElementById('totalUnits').textContent = units.length.toLocaleString();
-    document.getElementById('untrackedUnits').textContent = c.untracked.toLocaleString();
+    document.getElementById('availableUnits').textContent = availableCount(c).toLocaleString();
     document.getElementById('reportedUnits').textContent = c.reported_taken.toLocaleString();
     document.getElementById('takenUnits').textContent = c.confirmed_taken.toLocaleString();
     if (window.__berlayarRefreshBlockLabels) window.__berlayarRefreshBlockLabels();
@@ -190,13 +203,14 @@
     const map = new Map(rows.map(r => [`${r.block_code}-${r.unit_no}`, r]));
     for (const u of units) {
       const row = map.get(`${u.block}-${floorNumber(u.floor)}-${u.stack}`);
-      u.status = row?.community_status || 'untracked';
+      const liveStatus = row?.community_status;
+      u.status = (!liveStatus || liveStatus === 'untracked') ? (DATA.project.statusBaseline || 'available') : liveStatus;
       u.live = row || null;
     }
     updateSummary();
     if (selectedBlock) {
       const c = statusCounts(blockUnits(selectedBlock.id));
-      document.getElementById('drawerUntracked').textContent = c.untracked.toLocaleString();
+      document.getElementById('drawerAvailable').textContent = availableCount(c).toLocaleString();
       renderUnitGrid();
     }
     if (selectedUnit && unitDialog.open) updateUnitStatusUi(selectedUnit);
@@ -505,7 +519,7 @@
     document.getElementById('drawerBlockMeta').textContent = `${block.total.toLocaleString()} flats · ${block.storeys} storeys`;
     document.getElementById('drawerGroundMeta').textContent = '';
     document.getElementById('drawerSpecialMeta').textContent = '';
-    document.getElementById('drawerUntracked').textContent = c.untracked.toLocaleString();
+    document.getElementById('drawerAvailable').textContent = availableCount(c).toLocaleString();
     document.getElementById('drawerTotal').textContent = block.total.toLocaleString();
     document.getElementById('drawerWait').textContent = `${block.waitMonths} mo`;
     document.getElementById('drawerTypeFilter').value = 'all';
@@ -594,7 +608,10 @@
         btn.textContent = `#${floorNumber(level)}-${stack.no}`;
         btn.title = `${typeLabel(u.type)} · ${statusLabel(u.status)}`;
         if (typeFilter !== 'all' && u.type !== typeFilter) btn.classList.add('hidden-type');
-        if (statusFilter !== 'all' && u.status !== statusFilter) btn.classList.add('hidden-status');
+        const matchesStatus = statusFilter === 'all'
+          || (statusFilter === 'available' && isAvailableStatus(u.status))
+          || u.status === statusFilter;
+        if (!matchesStatus) btn.classList.add('hidden-status');
         btn.addEventListener('click', () => selectUnitForQuickAction(u));
         td.appendChild(btn);
         tr.appendChild(td);

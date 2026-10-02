@@ -15,6 +15,7 @@
   --shadow:0 24px 80px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
+*[hidden]{display:none!important}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{overflow-x:hidden}
 button,select{font:inherit} button{color:inherit}
@@ -87,12 +88,12 @@ button,select{font:inherit} button{color:inherit}
 .ghost-btn.primary{background:var(--accent);color:#0b1713;border-color:var(--accent);font-weight:800}
 .dot.reported-available{background:var(--reported-available)}
 .dot.conflicting{background:var(--conflicting)}
-.unit-cell.reported_available{background:rgba(118,207,208,.14);color:#aeeff0;border-color:rgba(118,207,208,.22)}
+.unit-cell.reported_available{background:rgba(188,232,138,.12);color:#dff5bb;border-color:rgba(188,232,138,.15)}
 .unit-cell.confirmed_available{background:rgba(188,232,138,.14);color:#dff5bb;border-color:rgba(188,232,138,.25)}
 .unit-cell.reported_taken{background:rgba(244,191,98,.15);color:#ffd797;border-color:rgba(244,191,98,.22)}
 .unit-cell.confirmed_taken{background:rgba(95,108,104,.24);color:#9aa6a1;border-color:rgba(95,108,104,.3)}
 .unit-cell.conflicting{background:rgba(210,139,240,.14);color:#efcaff;border-color:rgba(210,139,240,.25)}
-.status-pill.reported_available{color:#092020;background:var(--reported-available)}
+.status-pill.reported_available{color:#0d1c12;background:var(--available)}
 .status-pill.confirmed_available{color:#0d1c12;background:var(--available)}
 .status-pill.reported_taken{color:#26190a;background:var(--reported)}
 .status-pill.confirmed_taken{color:#e3e8e6;background:var(--taken)}
@@ -202,7 +203,7 @@ button,select{font:inherit} button{color:inherit}
   border-top:1px solid var(--line);
   padding:11px;
 }
-.report-flow [hidden]{display:none!important}
+.report-flow[hidden]{display:none!important}
 
 .block-label{
   min-width:72px;

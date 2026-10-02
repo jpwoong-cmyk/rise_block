@@ -1,8 +1,8 @@
-# Berlayar Rise Community Flat Tracker — V1.5.0
+# Berlayar Rise Community Flat Tracker — V1.6.0
 
 A GitHub/Vercel-ready Berlayar Rise community tracker with a source-informed 3D estate view and shared reporting backed by Supabase.
 
-## What changed in V1.5.0
+## What changed in V1.6.0
 
 - Simplified public-facing copy and removed implementation/debug wording from the main experience.
 - Reduced 3D block-label clutter. Desktop labels show the block and a compact taken count; mobile shows the block number only.
@@ -202,3 +202,10 @@ The app imports Three.js and Supabase JS from `esm.sh`, so internet access is re
 V1.4.1 uses append-only report functions, RLS, no direct anonymous table updates, a short submission throttle, and community consensus instead of single-report overwrite.
 
 It is not strong identity verification. A determined person can still reset a browser token or spam from multiple clients. If the tracker becomes heavily used, the next protection layer should be CAPTCHA / Turnstile or lightweight sign-in rather than trying to infer identity from personal data.
+
+
+## V1.6 UX changes
+- All flats display as Available by default before booking begins.
+- Report Update opens with no form fields until Block quota, Unit status, or Queue progress is selected.
+- Only the selected report form is rendered.
+- Available/report-confirmed-available states are presented simply as Available to residents.

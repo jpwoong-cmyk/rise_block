@@ -55,11 +55,9 @@
       </div>
 
       <div class="legend glass" aria-label="Flat status legend">
-        <div><span class="dot untracked"></span>Untracked</div>
-        <div><span class="dot reported-available"></span>Reported available</div>
-        <div><span class="dot available"></span>Community-confirmed available</div>
+        <div><span class="dot available"></span>Available</div>
         <div><span class="dot reported"></span>Reported taken</div>
-        <div><span class="dot taken"></span>Community-confirmed taken</div>
+        <div><span class="dot taken"></span>Taken</div>
         <div><span class="dot conflicting"></span>Conflicting reports</div>
       </div>
 
@@ -71,7 +69,7 @@
 
     <section class="summary-strip" aria-label="Project summary">
       <div class="metric"><span>Total flats</span><strong id="totalUnits">1,976</strong></div>
-      <div class="metric"><span>Untracked</span><strong id="untrackedUnits">1,976</strong></div>
+      <div class="metric"><span>Available</span><strong id="availableUnits">1,976</strong></div>
       <div class="metric"><span>Reported taken</span><strong id="reportedUnits">0</strong></div>
       <div class="metric"><span>Confirmed taken</span><strong id="takenUnits">0</strong></div>
       <div class="metric compact"><span>2-Room Flexi</span><strong>816</strong></div>
@@ -124,7 +122,7 @@
     </div>
 
     <div class="drawer-stats">
-      <div><span>Untracked</span><strong id="drawerUntracked">0</strong></div>
+      <div><span>Available</span><strong id="drawerAvailable">0</strong></div>
       <div><span>Total</span><strong id="drawerTotal">0</strong></div>
       <div><span>Wait</span><strong id="drawerWait">—</strong></div>
     </div>
@@ -166,11 +164,9 @@
         <span>Status</span>
         <select id="drawerStatusFilter">
           <option value="all">All statuses</option>
-          <option value="untracked">Untracked</option>
-          <option value="reported_available">Reported available</option>
-          <option value="confirmed_available">Community-confirmed available</option>
+          <option value="available">Available</option>
           <option value="reported_taken">Reported taken</option>
-          <option value="confirmed_taken">Community-confirmed taken</option>
+          <option value="confirmed_taken">Taken</option>
           <option value="conflicting">Conflicting reports</option>
         </select>
       </label>
@@ -187,7 +183,7 @@
     <div id="quickUnitBar" class="quick-unit-bar" hidden>
       <div class="quick-unit-copy">
         <strong id="quickUnitTitle">#12-105</strong>
-        <span id="quickUnitMeta">4-Room · Untracked</span>
+        <span id="quickUnitMeta">4-Room · Available</span>
         <small id="quickUnitFeedback"></small>
       </div>
       <div class="quick-unit-actions">
@@ -204,7 +200,7 @@
       <section class="unit-copy">
         <div class="unit-context" id="unitCrumbBlock">Block</div>
         <h2 id="unitTitle">#12-105</h2>
-        <div id="unitStatusPill" class="status-pill untracked">Untracked</div>
+        <div id="unitStatusPill" class="status-pill available">Available</div>
 
         <dl class="unit-details">
           <div><dt>Block</dt><dd id="unitBlock"></dd></div>
@@ -367,7 +363,7 @@
     <div class="eyebrow">PUBLIC DATA SOURCES</div>
     <h2>References</h2>
     <div id="sourcesList" class="sources-list"></div>
-    <p class="source-footnote">Community status comes from resident reports. Unreported flats remain untracked. 3D positions are approximate; use the linked references for published plans.</p>
+    <p class="source-footnote">Flats start as available. Community reports update their status as bookings begin. 3D positions are approximate; use the linked references for published plans.</p>
   </dialog>
 
   <script src="data/berlayar-data.js"></script>
