@@ -62,8 +62,8 @@
       if (block.stacks.length !== 8) notes.push(`${block.id}: expected 8 stack columns, found ${block.stacks.length}.`);
     }
 
-    if (errors.length) console.error('Berlayar V1.3 dataset validation FAILED:', errors);
-    else console.info(`Berlayar V1.3 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals reconcile.`);
+    if (errors.length) console.error('Berlayar V1.4 dataset validation FAILED:', errors);
+    else console.info(`Berlayar V1.4 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals reconcile.`);
     if (notes.length) console.info('Berlayar dataset notes:', notes);
   }
   validateData();
@@ -72,15 +72,24 @@
     return subset.reduce((acc, u) => {
       acc[u.status] = (acc[u.status] || 0) + 1;
       return acc;
-    }, {untracked:0, available:0, reported:0, taken:0});
+    }, {
+      untracked:0,
+      reported_available:0,
+      confirmed_available:0,
+      reported_taken:0,
+      confirmed_taken:0,
+      conflicting:0
+    });
   }
 
   function statusLabel(status) {
     return ({
       untracked: 'Untracked',
-      available: 'Confirmed available',
-      reported: 'Reported taken',
-      taken: 'Confirmed taken'
+      reported_available: 'Reported available',
+      confirmed_available: 'Community-confirmed available',
+      reported_taken: 'Reported taken',
+      confirmed_taken: 'Community-confirmed taken',
+      conflicting: 'Conflicting reports'
     })[status] || status;
   }
 
@@ -88,8 +97,9 @@
     const c = statusCounts();
     document.getElementById('totalUnits').textContent = units.length.toLocaleString();
     document.getElementById('untrackedUnits').textContent = c.untracked.toLocaleString();
-    document.getElementById('reportedUnits').textContent = c.reported.toLocaleString();
-    document.getElementById('takenUnits').textContent = c.taken.toLocaleString();
+    document.getElementById('reportedUnits').textContent = c.reported_taken.toLocaleString();
+    document.getElementById('takenUnits').textContent = c.confirmed_taken.toLocaleString();
+    if (window.__berlayarRefreshBlockLabels) window.__berlayarRefreshBlockLabels();
   }
   updateSummary();
 
@@ -100,6 +110,319 @@
   const sourcesDialog = document.getElementById('sourcesDialog');
   let selectedBlock = null;
   let selectedUnit = null;
+
+
+  // ---------- V1.4 shared community data (Supabase / riseblock only) ----------
+  const communityPanel = document.getElementById('communityPanel');
+  const communityBackdrop = document.getElementById('communityBackdrop');
+  const reportResult = document.getElementById('reportResult');
+  const quotaByBlock = new Map();
+  let currentProgress = null;
+  let supabase = null;
+  let communityDbReady = false;
+
+  const reporterTokenKey = 'berlayar_rise_reporter_token_v1';
+  function fallbackUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  function getReporterToken() {
+    try {
+      let token = localStorage.getItem(reporterTokenKey);
+      if (!token) {
+        token = crypto.randomUUID ? crypto.randomUUID() : fallbackUuid();
+        localStorage.setItem(reporterTokenKey, token);
+      }
+      return token;
+    } catch (_) {
+      return crypto.randomUUID ? crypto.randomUUID() : fallbackUuid();
+    }
+  }
+  const reporterToken = getReporterToken();
+
+  function localDateTimeValue(date = new Date()) {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0,16);
+  }
+  function readableDate(value) {
+    if (!value) return '';
+    return new Intl.DateTimeFormat('en-SG', {
+      day:'numeric', month:'short', hour:'numeric', minute:'2-digit', timeZone:'Asia/Singapore'
+    }).format(new Date(value));
+  }
+  function confidenceLabel(value, support = 0, conflict = 0) {
+    const labels = {
+      community_confirmed: `Community confirmed · ${support} matching reports`,
+      community_supported: `Community supported · ${support} matching / ${conflict} conflicting`,
+      reported: 'Reported · 1 community observation',
+      conflicting: `Conflicting reports · ${support} matching / ${conflict} conflicting`
+    };
+    return labels[value] || 'Not yet reported';
+  }
+
+  function setDbStatus(message, offline = false) {
+    const el = document.getElementById('dbStatusText');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('db-offline', offline);
+  }
+
+  function applyUnitStatuses(rows) {
+    const map = new Map(rows.map(r => [`${r.block_code}-${r.unit_no}`, r]));
+    for (const u of units) {
+      const row = map.get(`${u.block}-${floorNumber(u.floor)}-${u.stack}`);
+      u.status = row?.community_status || 'untracked';
+      u.live = row || null;
+    }
+    updateSummary();
+    if (selectedBlock) {
+      const c = statusCounts(blockUnits(selectedBlock.id));
+      document.getElementById('drawerUntracked').textContent = c.untracked.toLocaleString();
+      renderUnitGrid();
+    }
+    if (selectedUnit && unitDialog.open) updateUnitStatusUi(selectedUnit);
+  }
+
+  function updateUnitStatusUi(u) {
+    const pill = document.getElementById('unitStatusPill');
+    if (!pill) return;
+    pill.className = `status-pill ${u.status}`;
+    pill.textContent = statusLabel(u.status);
+    document.getElementById('unitAvailabilityCertainty').textContent = statusLabel(u.status);
+  }
+
+  function renderQuotaForSelectedBlock() {
+    if (!selectedBlock) return;
+    const q = quotaByBlock.get(selectedBlock.id);
+    const empty = document.getElementById('quotaEmpty');
+    const values = document.getElementById('quotaValues');
+    if (!q) {
+      empty.hidden = false;
+      values.hidden = true;
+      document.getElementById('quotaConfidence').textContent = 'Not yet reported';
+      document.getElementById('quotaObservedAt').textContent = '';
+      return;
+    }
+    empty.hidden = true;
+    values.hidden = false;
+    document.getElementById('quotaMalay').textContent = q.malay_remaining.toLocaleString();
+    document.getElementById('quotaChinese').textContent = q.chinese_remaining.toLocaleString();
+    document.getElementById('quotaIndian').textContent = q.indian_other_remaining.toLocaleString();
+    document.getElementById('quotaConfidence').textContent = confidenceLabel(q.confidence, q.support_count, q.conflict_count);
+    document.getElementById('quotaObservedAt').textContent = `Observed ${readableDate(q.latest_observed_at)}`;
+  }
+
+  function renderProgress() {
+    if (!currentProgress) {
+      document.getElementById('queueReached').textContent = '—';
+      document.getElementById('dropoutsReported').textContent = '—';
+      document.getElementById('impliedBookings').textContent = '—';
+      document.getElementById('estimatedRemaining').textContent = '—';
+      document.getElementById('progressConfidence').textContent = 'No progress report yet';
+      return;
+    }
+    document.getElementById('queueReached').textContent = Number(currentProgress.queue_reached).toLocaleString();
+    document.getElementById('dropoutsReported').textContent = Number(currentProgress.dropouts).toLocaleString();
+    document.getElementById('impliedBookings').textContent = Number(currentProgress.implied_bookings).toLocaleString();
+    document.getElementById('estimatedRemaining').textContent = Number(currentProgress.estimated_remaining).toLocaleString();
+    document.getElementById('progressConfidence').textContent = `${confidenceLabel(currentProgress.confidence, currentProgress.support_count, currentProgress.conflict_count)} · ${readableDate(currentProgress.latest_observed_at)}`;
+  }
+
+  async function fetchAllUnitStatuses() {
+    const rows = [];
+    for (let start = 0; start < 3000; start += 1000) {
+      const { data, error } = await supabase.from('unit_status_current').select('*').order('unit_id').range(start, start + 999);
+      if (error) throw error;
+      rows.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    return rows;
+  }
+
+  async function refreshCommunityData() {
+    if (!supabase) return;
+    const [unitRows, quotaRes, progressRes] = await Promise.all([
+      fetchAllUnitStatuses(),
+      supabase.from('block_quota_current').select('*'),
+      supabase.from('selection_progress_current').select('*').limit(1)
+    ]);
+    if (quotaRes.error) throw quotaRes.error;
+    if (progressRes.error) throw progressRes.error;
+    applyUnitStatuses(unitRows);
+    quotaByBlock.clear();
+    for (const q of quotaRes.data || []) quotaByBlock.set(q.block_code, q);
+    currentProgress = progressRes.data?.[0] || null;
+    renderQuotaForSelectedBlock();
+    renderProgress();
+    setDbStatus('Live community data connected · Supabase riseblock schema');
+    communityDbReady = true;
+  }
+
+  async function connectCommunityData() {
+    const cfg = window.BERLAYAR_SUPABASE;
+    if (!cfg?.url || !cfg?.publishableKey) {
+      setDbStatus('Shared tracker is not configured.', true);
+      return;
+    }
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      supabase = createClient(cfg.url, cfg.publishableKey, { db: { schema: cfg.schema || 'riseblock' } });
+      await refreshCommunityData();
+    } catch (err) {
+      console.error('Community data connection failed:', err);
+      const message = String(err?.message || err || 'Unknown database error');
+      if (/schema|exposed|profile/i.test(message)) {
+        setDbStatus('Supabase is ready, but riseblock must be added to Data API → Exposed schemas.', true);
+      } else {
+        setDbStatus(`Community data unavailable: ${message}`, true);
+      }
+    }
+  }
+
+  function populateBlockSelect(select, preferred) {
+    select.innerHTML = DATA.blocks.map(b => `<option value="${b.id}">${b.id}</option>`).join('');
+    if (preferred && DATA.blocks.some(b => b.id === preferred)) select.value = preferred;
+  }
+  function populateUnitSelect(blockCode, preferredUnit) {
+    const select = document.getElementById('unitReportUnit');
+    const list = blockUnits(blockCode).slice().sort((a,b) => a.floor - b.floor || Number(a.stack) - Number(b.stack));
+    select.innerHTML = list.map(u => `<option value="${floorNumber(u.floor)}-${u.stack}">#${floorNumber(u.floor)}-${u.stack} · ${typeLabel(u.type)}</option>`).join('');
+    if (preferredUnit && list.some(u => `${floorNumber(u.floor)}-${u.stack}` === preferredUnit)) select.value = preferredUnit;
+  }
+  function resetReportResult() {
+    reportResult.hidden = true;
+    reportResult.className = 'report-result';
+    reportResult.textContent = '';
+  }
+  function showReportResult(message, ok = true) {
+    reportResult.hidden = false;
+    reportResult.className = `report-result ${ok ? 'success' : 'error'}`;
+    reportResult.textContent = message;
+  }
+  function setReportKind(kind, context = {}) {
+    document.querySelectorAll('[data-report-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.reportKind === kind));
+    document.getElementById('quotaReportForm').hidden = kind !== 'quota';
+    document.getElementById('unitReportForm').hidden = kind !== 'unit';
+    document.getElementById('progressReportForm').hidden = kind !== 'progress';
+    resetReportResult();
+    const now = localDateTimeValue();
+    if (kind === 'quota') {
+      populateBlockSelect(document.getElementById('quotaReportBlock'), context.block || selectedBlock?.id);
+      document.getElementById('quotaReportObserved').value = now;
+    }
+    if (kind === 'unit') {
+      const blockCode = context.block || selectedUnit?.block || selectedBlock?.id || DATA.blocks[0].id;
+      populateBlockSelect(document.getElementById('unitReportBlock'), blockCode);
+      populateUnitSelect(blockCode, context.unit || (selectedUnit ? `${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : null));
+      document.getElementById('unitReportObserved').value = now;
+    }
+    if (kind === 'progress') document.getElementById('progressReportObserved').value = now;
+  }
+  function openCommunity(kind = null, context = {}) {
+    communityPanel.classList.add('open');
+    communityPanel.setAttribute('aria-hidden','false');
+    communityBackdrop.hidden = false;
+    if (kind) setReportKind(kind, context);
+  }
+  function closeCommunity() {
+    communityPanel.classList.remove('open');
+    communityPanel.setAttribute('aria-hidden','true');
+    communityBackdrop.hidden = true;
+  }
+
+  populateBlockSelect(document.getElementById('quotaReportBlock'));
+  populateBlockSelect(document.getElementById('unitReportBlock'));
+  populateUnitSelect(DATA.blocks[0].id);
+  document.getElementById('unitReportBlock').addEventListener('change', e => populateUnitSelect(e.target.value));
+  document.getElementById('communityReportBtn').addEventListener('click', () => openCommunity());
+  document.getElementById('reportProgressBtn').addEventListener('click', () => openCommunity('progress'));
+  document.getElementById('reportQuotaBtn').addEventListener('click', () => openCommunity('quota', {block:selectedBlock?.id}));
+  document.getElementById('reportUnitBtn').addEventListener('click', () => {
+    if (!selectedUnit) return;
+    unitDialog.close();
+    openCommunity('unit', {block:selectedUnit.block, unit:`${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`});
+  });
+  document.getElementById('closeCommunityBtn').addEventListener('click', closeCommunity);
+  communityBackdrop.addEventListener('click', closeCommunity);
+  document.querySelectorAll('[data-report-kind]').forEach(btn => btn.addEventListener('click', () => setReportKind(btn.dataset.reportKind)));
+
+  async function runSubmission(form, rpcName, payload, successText) {
+    if (!communityDbReady || !supabase) {
+      showReportResult('Shared database is not connected yet. Check the Supabase Data API exposed-schema setting.', false);
+      return;
+    }
+    const button = form.querySelector('.submit-report-btn');
+    button.disabled = true;
+    resetReportResult();
+    try {
+      const { error } = await supabase.rpc(rpcName, payload);
+      if (error) throw error;
+      showReportResult(successText, true);
+      await refreshCommunityData();
+    } catch (err) {
+      console.error(err);
+      showReportResult(err?.message || 'Could not submit this update.', false);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  document.getElementById('unitReportForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const status = new FormData(form).get('unitReportStatus');
+    await runSubmission(form, 'submit_unit_report', {
+      p_block_code: document.getElementById('unitReportBlock').value,
+      p_unit_no: document.getElementById('unitReportUnit').value,
+      p_status: status,
+      p_observed_at: new Date(document.getElementById('unitReportObserved').value).toISOString(),
+      p_source_type: document.getElementById('unitReportSource').value,
+      p_source_note: document.getElementById('unitReportNote').value,
+      p_evidence_url: document.getElementById('unitReportEvidence').value,
+      p_reporter_token: reporterToken
+    }, 'Unit observation added. The displayed status now reflects the latest community consensus.');
+  });
+
+  document.getElementById('quotaReportForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    await runSubmission(form, 'submit_quota_report', {
+      p_block_code: document.getElementById('quotaReportBlock').value,
+      p_malay_remaining: Number(document.getElementById('quotaReportMalay').value),
+      p_chinese_remaining: Number(document.getElementById('quotaReportChinese').value),
+      p_indian_other_remaining: Number(document.getElementById('quotaReportIndian').value),
+      p_observed_at: new Date(document.getElementById('quotaReportObserved').value).toISOString(),
+      p_source_type: document.getElementById('quotaReportSource').value,
+      p_source_note: document.getElementById('quotaReportNote').value,
+      p_evidence_url: document.getElementById('quotaReportEvidence').value,
+      p_reporter_token: reporterToken
+    }, 'Block quota observation added. Matching reports will raise its confidence.');
+  });
+
+  document.getElementById('progressReportForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const q = Number(document.getElementById('progressReportQueue').value);
+    const d = Number(document.getElementById('progressReportDropouts').value);
+    if (d > q) {
+      showReportResult('Dropouts cannot exceed the last queue reached.', false);
+      return;
+    }
+    await runSubmission(form, 'submit_progress_report', {
+      p_queue_reached: q,
+      p_dropouts: d,
+      p_observed_at: new Date(document.getElementById('progressReportObserved').value).toISOString(),
+      p_source_type: document.getElementById('progressReportSource').value,
+      p_source_note: document.getElementById('progressReportNote').value,
+      p_evidence_url: document.getElementById('progressReportEvidence').value,
+      p_reporter_token: reporterToken
+    }, 'Selection progress added. Queue-based progress and unit-by-unit tracking remain separate signals.');
+  });
+
+  connectCommunityData();
 
   function blockUnits(id) { return units.filter(u => u.block === id); }
 
@@ -125,6 +448,7 @@
     document.getElementById('drawerTypeFilter').value = 'all';
     document.getElementById('drawerStatusFilter').value = 'all';
     renderUnitGrid();
+    renderQuotaForSelectedBlock();
     blockDrawer.classList.add('open');
     blockDrawer.setAttribute('aria-hidden','false');
   }
@@ -292,7 +616,9 @@
       html += `<div class="elev-level">${floorNumber(level)}</div>`;
       for (const stack of block.stacks) {
         const selected = level === u.floor && stack.no === u.stack;
-        html += `<div class="elev-unit${selected?' selected':''}" style="--unit-color:${typeColorHex(stack.type)}" title="#${floorNumber(level)}-${stack.no} · ${typeLabel(stack.type)}">${selected?'<span>●</span>':''}</div>`;
+        const cellUnit = units.find(x => x.block === block.id && x.floor === level && x.stack === stack.no);
+        const liveStatus = cellUnit?.status || 'untracked';
+        html += `<div class="elev-unit status-${liveStatus}${selected?' selected':''}" style="--unit-color:${typeColorHex(stack.type)}" title="#${floorNumber(level)}-${stack.no} · ${typeLabel(stack.type)} · ${statusLabel(liveStatus)}">${selected?'<span>●</span>':''}</div>`;
       }
     }
     html += '</div>';
@@ -321,11 +647,7 @@
     document.getElementById('unitLayoutNote').textContent = meta.layoutNote;
     document.getElementById('unitPlanSource').href = meta.sourcePlanUrl;
     document.getElementById('unitDistributionSource').href = distributionSource?.url || sourceMap.get('brochure')?.url || '#';
-    document.getElementById('unitAvailabilityCertainty').textContent = statusLabel(u.status);
-
-    const pill = document.getElementById('unitStatusPill');
-    pill.className = `status-pill ${u.status}`;
-    pill.textContent = statusLabel(u.status);
+    updateUnitStatusUi(u);
     unitDialog.showModal();
   }
 
@@ -608,13 +930,22 @@
     }
     DATA.shelteredLinks.forEach(l=>addShelteredLink(l.from,l.to));
 
-    // Block labels.
+    // Block labels. Live community counts are deliberately shown as tracked/taken, not inferred availability.
+    function refreshBlockLabels(){
+      for(const block of DATA.blocks){
+        const el=labels.get(block.id);
+        if(!el) continue;
+        const c=statusCounts(blockUnits(block.id));
+        const tracked=block.total-c.untracked;
+        el.innerHTML=`<strong>Block ${block.id}</strong><span>${c.confirmed_taken.toLocaleString()} confirmed taken · ${block.total.toLocaleString()} total</span><span class="live-sub">${tracked.toLocaleString()} units community-tracked</span>`;
+      }
+    }
     for(const block of DATA.blocks){
       const el=document.createElement('button'); el.type='button'; el.className='block-label';
-      const c=statusCounts(blockUnits(block.id));
-      el.innerHTML=`<strong>Block ${block.id}</strong><span>${c.untracked.toLocaleString()} untracked · ${block.total.toLocaleString()} total</span>`;
       el.addEventListener('click',()=>openBlock(block)); sceneHost.appendChild(el); labels.set(block.id,el);
     }
+    window.__berlayarRefreshBlockLabels=refreshBlockLabels;
+    refreshBlockLabels();
 
     const majorFeatureIds=new Set(['mrt','preschool','mscp','rn','community-zone','play','hardcourt','future-bus-west','future-bus-south-1','future-bus-south-2','futurepark-nw','futurepark-south','publichousing-west','futurehousing-east']);
     const allLabelFeatures=[...DATA.siteFeatures,...planOnlyFeatures];

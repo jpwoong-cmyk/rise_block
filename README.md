@@ -1,14 +1,99 @@
-# Berlayar Rise Community Flat Tracker — V1.3
+# Berlayar Rise Community Flat Tracker — V1.4
 
-A GitHub/Vercel-ready static prototype for a **Berlayar Rise-only** community flat-selection tracker.
+A GitHub/Vercel-ready Berlayar Rise community tracker with a source-informed 3D estate view and shared reporting backed by Supabase.
 
-V1.3 is deliberately strict about source fidelity: source-backed facts are separated from schematic 3D geometry, and every flat starts as **Untracked** rather than pretending to be currently available.
+## What changed in V1.4
 
-## V1.3 source audit
+- Connected to Supabase project `jxmafsnxfupdvbqnfixd`, schema `riseblock` only.
+- Seeded the verified Berlayar Rise unit master data into Supabase: 6 residential blocks, 48 stacks, 1,976 units.
+- Added guided community reporting for:
+  - unit status;
+  - block ethnic-quota observations;
+  - queue / dropout progress.
+- Added a block quota panel and live selection-progress panel.
+- Individual unit cells now take their live community state from Supabase.
+- Added lightweight consensus handling instead of letting one report overwrite the tracker.
 
-The generated flat database reconciles to the public project totals:
+## Supabase objects created
 
-| Block | Source-derived residential units |
+Only application objects in the `riseblock` schema were created or modified:
+
+- `projects`
+- `blocks`
+- `stacks`
+- `units`
+- `unit_reports`
+- `block_quota_reports`
+- `selection_progress_reports`
+- `unit_status_current` view
+- `block_status_summary` view
+- `block_quota_current` view
+- `block_quota_history` view
+- `selection_progress_current` view
+- `selection_progress_history` view
+- `submit_unit_report(...)`
+- `submit_quota_report(...)`
+- `submit_progress_report(...)`
+
+The other application schemas in the Supabase project were not edited.
+
+## Required one-time Supabase Dashboard setting
+
+Supabase does not expose custom schemas through the Data API automatically.
+
+In the Supabase Dashboard:
+
+1. Open **Project Settings → API**.
+2. Find **Exposed schemas**.
+3. Add `riseblock`.
+4. Save.
+
+The database grants and RLS setup are already present. Do not add any other schema for this tracker.
+
+The app detects this condition and will display an explicit message if `riseblock` has not yet been exposed.
+
+## Community truth model
+
+No visitor directly changes a unit row or quota row.
+
+Every update is appended as an observation. The app derives the currently displayed community state from recent reports.
+
+For unit status:
+
+- no reports → `Untracked`;
+- one recent report → `Reported available` / `Reported taken`;
+- two or more matching distinct browser tokens in the latest 24-hour observation window → `Community-confirmed available` / `Community-confirmed taken`;
+- conflicting recent reports → `Conflicting reports`.
+
+For block quota and queue progress, the latest observed values are shown with a confidence label based on matching / conflicting recent reports.
+
+This is community data, not official HDB live data.
+
+## Ethnic quota privacy rule
+
+Quota is recorded only at **block level**:
+
+- Malay remaining;
+- Chinese remaining;
+- Indian / Others remaining.
+
+The tracker never stores ethnicity against a specific unit or household.
+
+## Queue progress
+
+The progress panel keeps queue-based progress separate from unit-by-unit reports:
+
+`implied bookings = last queue reached - cumulative dropouts`
+
+`estimated remaining = 1,976 - implied bookings`
+
+The app does not use those estimates to invent which individual units were booked.
+
+## Verified unit seed
+
+The Supabase seed reconciles to:
+
+| Block | Units |
 |---|---:|
 | 200A | 344 |
 | 200B | 368 |
@@ -28,127 +113,54 @@ And by flat type:
 | 4-Room | 988 |
 | **Total** | **1,976** |
 
-The app validates those totals in JavaScript at startup.
+## Source-fidelity rule
 
-## What is treated as verified data
+Source-backed facts remain separate from schematic visual geometry.
 
-- Project supply: 1,976 units across six residential blocks.
-- Block IDs: 200A, 200B, 201A, 201B, 204A, 204B.
-- Published 33–49-storey project height range.
-- Stack numbers and flat type assigned to each stack.
-- Residential floor ranges.
-- Sky-terrace levels shown in the unit-distribution charts:
-  - 200A: 09, 29
-  - 200B: 20, 40
-  - 201A: 09, 30
-  - 201B: 22, 37
-- Accessible roof-garden markers shown at the top of 201A, 201B and 204B.
-- Residents’ Network Centre marker at Block 201B.
-- Official HDB flat-type floor areas and indicative 99-year price ranges.
-- Site-plan features that are explicitly labelled or described in the listed public sources, including Telok Blangah MRT, the 3-storey preschool, Block 203 MSCP, communal/play/fitness facilities and surrounding reserved land.
+The app still does **not** claim:
 
-## What remains schematic / deliberately not claimed
-
-- Exact surveyed x/y coordinates and distances in the 3D scene.
-- Exact construction/BIM footprint of residential blocks and amenities.
-- Exact sheltered-linkway alignment.
-- Exact façade/window position of a stack. The 3D "Locate this unit" highlight uses the published stack order on a **schematic tower face**.
-- Exact function of standalone site-plan structures labelled Blocks 200, 201, 202, 204 and 205. V1.3 shows those source-plan labels but **does not guess their use**.
-- Live HDB flat availability.
-- Exact selling price of a specific unit.
-
-## Status model
-
-All 1,976 flats start as:
-
-`Untracked`
-
-That means "no community live-status record yet". It does **not** mean "available".
-
-The data model already reserves these future states:
-
-- Untracked
-- Confirmed available
-- Reported taken
-- Confirmed taken
-
-Shared reporting is intentionally disabled until persistent storage and moderation rules are added.
-
-## Unit drill-down
-
-Navigation is now:
-
-**Estate → Block → Level / stack → Unit**
-
-The unit view contains:
-
-1. source-derived block elevation with the selected level/stack highlighted;
-2. explicit sky-terrace / roof-garden rows;
-3. flat type and official HDB flat-type price range;
-4. an original simplified flat-layout redraw;
-5. links back to public unit-distribution and floor-plan sources;
-6. a "Locate this unit on the tower" action, clearly labelled in-app as schematic façade positioning.
-
-## 3D precinct layer
-
-V1.3 includes source-backed orientation markers for:
-
-- Telok Blangah MRT Station;
-- Telok Blangah Road / West Coast Highway;
-- Berlayar Street;
-- Berlayar Drive;
-- six residential blocks;
-- Block 203 6-storey MSCP + accessible roof garden;
-- 3-storey preschool;
-- Residents’ Network Centre at 201B;
-- grouped communal space marker;
-- children’s play, fitness and hardcourt areas;
-- sheltered-linkway connectivity sketch;
-- future bus-stop markers;
-- public housing under construction to the west;
-- park-reserve and future high-rise-residential parcels shown in the source plan;
-- source-plan labels for standalone Blocks 200, 201, 202, 204 and 205 without invented uses.
-
-A **Plan view** button gives a top-down orientation view.
+- surveyed 3D coordinates;
+- exact BIM footprints;
+- exact façade/window position of each stack;
+- a live HDB availability feed;
+- exact per-unit HDB selling prices.
 
 ## Primary public sources
 
-1. **HDB — Berlayar Rise sales brochure, June 2026**  
+1. HDB — Berlayar Rise sales brochure, June 2026  
    https://assets.hdb.gov.sg/residential/buying-a-flat/finding-a-flat/sales-brochure/26JUNBTO_pdf_selection/berlayar_rise.pdf
-2. **HDB — Annex A, June 2026 BTO flat supply and pricing details**  
+2. HDB — Annex A, June 2026 BTO flat supply and pricing details  
    https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf
-3. **HDB — June 2026 BTO launch announcement**  
+3. HDB — June 2026 BTO launch announcement  
    https://www.hdb.gov.sg/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise
-4. **HDB Awards — Berlayar Residences & Berlayar Rise**  
+4. HDB Awards — Berlayar Residences & Berlayar Rise  
    https://building-partner.hdb.gov.sg/awardwinners-projectshowcase/hdb-design-award/berlayar-residences---berlayar-rise/
-5. **HDB — Berlayar estate masterplan**  
+5. HDB — Berlayar estate masterplan  
    https://www.hdb.gov.sg/hdb-pulse/news/2025/hdb-unveils-masterplan-for-berlayar-estate
-
-Public mirrors / secondary guides used only as cross-checks are listed in the app’s **Sources** dialog.
 
 ## Run locally
 
-Extract the ZIP and open `index.html`, or serve the folder with any static HTTP server.
+Use a static web server rather than double-clicking the file if possible:
 
-The 3D view imports Three.js from `esm.sh`, so internet access is required for the 3D engine. If that import fails, the app falls back to an interactive 2D site view instead of a blank screen.
+```bash
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000`.
+
+The app imports Three.js and Supabase JS from `esm.sh`, so internet access is required.
 
 ## Deploy with GitHub + Vercel
 
-1. Create a GitHub repository.
-2. Upload the contents of this folder to the repository root.
-3. Create a Vercel project and import the repository.
-4. No build command is required.
-5. Deploy.
+1. Put this folder at the root of the GitHub repository.
+2. Import the repository into Vercel.
+3. No build command is required.
+4. Deploy.
 
 `vercel.json` is included.
 
-## Not implemented yet
+## Abuse resistance
 
-- shared community reporting / confirmation;
-- database writes;
-- user identity / anti-abuse controls;
-- queue / dropout submissions;
-- ethnic-quota reports;
-- exact per-unit selling prices.
+V1.4 uses append-only report functions, RLS, no direct anonymous table updates, a short submission throttle, and community consensus instead of single-report overwrite.
 
-Those should only be connected once we add persistent storage and explicit trust/moderation rules.
+It is not strong identity verification. A determined person can still reset a browser token or spam from multiple clients. If the tracker becomes heavily used, the next protection layer should be CAPTCHA / Turnstile or lightweight sign-in rather than trying to infer identity from personal data.

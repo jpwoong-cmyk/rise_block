@@ -11,7 +11,7 @@
   - live flat status is NOT sourced from HDB. All units begin as "untracked".
 */
 window.BERLAYAR_DATA = {
-  version: "1.3",
+  version: "1.4",
 
   project: {
     name: "Berlayar Rise",
