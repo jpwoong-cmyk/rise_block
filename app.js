@@ -1306,8 +1306,8 @@
     let unitHighlight = null;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a1713);
-    scene.fog = new THREE.Fog(0x0a1713, 64, 116);
+    scene.background = new THREE.Color(0x091511);
+    scene.fog = new THREE.Fog(0x091511, 66, 124);
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 220);
     camera.position.set(43, 48, 57);
@@ -1324,7 +1324,7 @@
     controls.dampingFactor = .065;
     controls.enablePan = false;
     controls.minDistance = 19;
-    controls.maxDistance = 110;
+    controls.maxDistance = 116;
     controls.maxPolarAngle = Math.PI*.49;
     controls.target.set(-1,3,1);
 
@@ -1384,17 +1384,18 @@
     }
 
     // Schematic outer surroundings for visual context only.
-    addContextPatch(-40,-24,24,18,0x46644b,.82,-0.12);   // NW greenery
-    addContextPatch(-39,2,10,44,0x3c5752,.78,0.04);      // Berlayar Creek / green edge
-    addContextPatch(32,2,20,36,0x5d675f,.7,-0.04);       // East urban band
-    addContextPatch(19,34,46,18,0x315867,.66,0.02);      // South / harbour-waterfront band
-    addContextPatch(-15,36,28,12,0x56705b,.72,0.01);     // South green / park band
-    addContextEllipse(26,-29,18,9,0x486651,.72,0.15);    // North-east hill park mass
-    addContextEllipse(-18,-31,16,7,0x55715b,.65,-0.14);  // North-west green mass
+    addContextPatch(-40,-24,26,19,0x496a4d,.78,-0.12);   // NW greenery
+    addContextPatch(-39,2,11,48,0x476e67,.72,0.04);      // Berlayar Creek / green edge
+    addContextPatch(32,2,20,36,0x646d64,.62,-0.04);      // East urban band
+    addContextPatch(21,35,50,20,0x2f6276,.56,0.02);      // South / harbour-waterfront band
+    addContextPatch(-15,36,30,12,0x60785f,.66,0.01);     // South green / park band
+    addContextEllipse(26,-29,18,9,0x55765d,.66,0.15);    // North-east hill park mass
+    addContextEllipse(-18,-31,16,7,0x638265,.58,-0.14);  // North-west green mass
+    addContextEllipse(28,33,16,6,0x3b7182,.42,0.10);     // soft harbour glint
 
-    addMiniHill(20,-31,4.6,2.6,1.6,0x4d7256);
-    addMiniHill(27,-27,3.2,2.2,1.25,0x4f7859);
-    addMiniHill(-18,-29,3.6,2.1,1.1,0x628268);
+    addMiniHill(20,-31,4.8,2.7,1.6,0x54775a);
+    addMiniHill(27,-27,3.4,2.3,1.25,0x577f60);
+    addMiniHill(-18,-29,3.8,2.2,1.1,0x6a896c);
 
     function addParcel(x,z,w,d,color,featureId=null) {
       const p = new THREE.Mesh(new THREE.BoxGeometry(w,.08,d), new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity:.72}));
@@ -1649,11 +1650,11 @@
     // Surrounding scenery labels are static context cues only. They are not clickable
     // and do not change the camera target.
     const surroundingLandmarks = [
-      { id:'sur-hills', text:'Mount Faber / Telok Blangah Hill', sub:'hill parks', x:22, z:-33, y:1.2, tone:'hills' },
-      { id:'sur-town', text:'Telok Blangah MRT / neighbourhood', sub:'north of the estate', x:-2, z:-36, y:1.1, tone:'urban' },
-      { id:'sur-creek', text:'Berlayar Creek / green edge', sub:'west side context', x:-41, z:1, y:1.0, tone:'creek' },
-      { id:'sur-water', text:'Waterfront / harbour', sub:'south / south-east context', x:20, z:35, y:1.0, tone:'water' },
-      { id:'sur-east', text:'Surrounding urban area', sub:'future / adjacent residential context', x:35, z:7, y:1.0, tone:'urban' }
+      { id:'sur-hills', text:'Mount Faber / Telok Blangah Hill', sub:'green / hill-park direction', x:22, z:-33, y:1.2, tone:'hills' },
+      { id:'sur-town', text:'Telok Blangah MRT', sub:'front edge of the estate', x:-2, z:-36, y:1.1, tone:'urban' },
+      { id:'sur-creek', text:'Berlayar Creek', sub:'west-side green edge', x:-41, z:1, y:1.0, tone:'creek' },
+      { id:'sur-water', text:'Waterfront / harbour', sub:'southern coastal direction', x:20, z:35, y:1.0, tone:'water' },
+      { id:'sur-east', text:'Surrounding neighbourhood', sub:'adjacent / future residential context', x:35, z:7, y:1.0, tone:'urban' }
     ];
     const surroundingLabelEls = [];
     if (sceneSurroundingsHost) {
@@ -1805,6 +1806,7 @@
       surroundingLabelEls.forEach(item=>item.el.classList.toggle('layer-hidden',!e.target.checked));
       document.querySelector('.scene-context-backdrop')?.classList.toggle('is-hidden', !e.target.checked);
       document.querySelector('.surroundings-card')?.classList.toggle('is-muted', !e.target.checked);
+      document.querySelector('.scene-edge-hints')?.classList.toggle('is-muted', !e.target.checked);
     });
 
   } catch(error) {
