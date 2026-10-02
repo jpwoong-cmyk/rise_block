@@ -366,6 +366,7 @@
           <button class="chat-choice" data-report-kind="quota" type="button">Block quota</button>
           <button class="chat-choice" data-report-kind="unit" type="button">Unit status</button>
           <button class="chat-choice" data-report-kind="progress" type="button">Queue progress</button>
+          <button class="chat-choice bulk-choice" data-report-kind="bulk" type="button"><span>Bulk update</span><small>Rapidly mark several units as taken</small></button>
         </div>
       </div>
 
@@ -414,6 +415,77 @@
         </details>
         <button class="submit-report-btn" type="submit">Submit unit status</button>
       </form>
+
+      <section id="bulkReportFlow" class="report-flow bulk-report-flow" hidden aria-label="Bulk unit update">
+        <div class="bulk-status-strip">
+          <span>UNIT STATUS</span>
+          <strong><i aria-hidden="true"></i> TAKEN</strong>
+        </div>
+
+        <div class="bulk-stepper" aria-label="Bulk update progress">
+          <span class="active" data-bulk-step-dot="block">1 <b>Block</b></span>
+          <span data-bulk-step-dot="units">2 <b>Units</b></span>
+          <span data-bulk-step-dot="review">3 <b>Review</b></span>
+        </div>
+
+        <div id="bulkBlockStep" class="bulk-step">
+          <div class="bulk-step-heading">
+            <div><small>STEP 1</small><h3>Which block?</h3></div>
+            <span>Enter 3 numbers + A/B</span>
+          </div>
+          <label class="bulk-entry-display">
+            <span>BLOCK</span>
+            <input id="bulkBlockInput" type="text" inputmode="none" autocomplete="off" maxlength="4" placeholder="200A" aria-label="Block number" />
+          </label>
+          <div id="bulkBlockHint" class="bulk-entry-hint" aria-live="polite">Choose a Berlayar Rise block.</div>
+          <div id="bulkBlockKeypad" class="bulk-keypad block-keypad" aria-label="Block keypad">
+            <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+            <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+            <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+            <button type="button" class="letter-key" data-key="A">A</button><button type="button" data-key="0">0</button><button type="button" class="letter-key" data-key="B">B</button>
+            <button type="button" class="wide-key" data-action="clear">Clear</button><button type="button" data-action="backspace" aria-label="Backspace">⌫</button>
+          </div>
+          <button id="bulkBlockNextBtn" class="submit-report-btn" type="button" disabled>Next: enter units</button>
+        </div>
+
+        <div id="bulkUnitsStep" class="bulk-step" hidden>
+          <div class="bulk-step-heading">
+            <div><small>STEP 2</small><h3 id="bulkUnitsHeading">Block</h3></div>
+            <button id="bulkChangeBlockBtn" class="text-btn" type="button">Change block</button>
+          </div>
+          <label class="bulk-entry-display unit-entry-display">
+            <span>UNIT</span>
+            <input id="bulkUnitInput" type="text" inputmode="none" autocomplete="off" spellcheck="false" placeholder="20-105" aria-label="Unit number" />
+          </label>
+          <div id="bulkUnitHint" class="bulk-entry-hint" aria-live="polite">The dash is added automatically after the floor number.</div>
+          <div id="bulkUnitChips" class="bulk-unit-chips" aria-live="polite"></div>
+          <div id="bulkUnitKeypad" class="bulk-keypad unit-keypad" aria-label="Unit keypad">
+            <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+            <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+            <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+            <button type="button" class="wide-key" data-action="clear">Clear</button><button type="button" data-key="0">0</button><button type="button" data-action="backspace" aria-label="Backspace">⌫</button>
+          </div>
+          <div class="bulk-step-actions">
+            <button id="bulkAnotherBlockBtn" class="ghost-btn" type="button" disabled>+ Another block</button>
+            <button id="bulkReviewBtn" class="submit-report-btn" type="button" disabled>Review</button>
+          </div>
+        </div>
+
+        <div id="bulkReviewStep" class="bulk-step" hidden>
+          <div class="bulk-step-heading">
+            <div><small>STEP 3</small><h3>Review taken units</h3></div>
+            <button id="bulkBackToUnitsBtn" class="text-btn" type="button">← Edit</button>
+          </div>
+          <div id="bulkReviewGroups" class="bulk-review-groups"></div>
+          <div class="bulk-review-total"><span>Total</span><strong id="bulkReviewCount">0 units</strong></div>
+          <p class="bulk-review-note">Each unit is submitted as a community observation. Matching reports can strengthen the community status.</p>
+          <div class="bulk-step-actions">
+            <button id="bulkAddMoreBtn" class="ghost-btn" type="button">+ Add another block</button>
+            <button id="bulkSubmitBtn" class="submit-report-btn bulk-submit-btn" type="button">Confirm taken</button>
+          </div>
+          <div id="bulkSubmitProgress" class="bulk-submit-progress" hidden aria-live="polite"></div>
+        </div>
+      </section>
 
       <form id="progressReportForm" class="report-flow" hidden>
         <div class="two-inputs">

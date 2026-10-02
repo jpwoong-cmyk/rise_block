@@ -692,7 +692,8 @@
   const reportTitles = {
     quota: 'Block quota',
     unit: 'Unit status',
-    progress: 'Queue progress'
+    progress: 'Queue progress',
+    bulk: 'Bulk update'
   };
 
   function showReportChooser() {
@@ -700,6 +701,7 @@
     document.getElementById('quotaReportForm').hidden = true;
     document.getElementById('unitReportForm').hidden = true;
     document.getElementById('progressReportForm').hidden = true;
+    document.getElementById('bulkReportFlow').hidden = true;
     reportChooser.hidden = false;
     reportFlowTop.hidden = true;
     reportContextText.textContent = '';
@@ -711,6 +713,7 @@
     document.getElementById('quotaReportForm').hidden = kind !== 'quota';
     document.getElementById('unitReportForm').hidden = kind !== 'unit';
     document.getElementById('progressReportForm').hidden = kind !== 'progress';
+    document.getElementById('bulkReportFlow').hidden = kind !== 'bulk';
     reportChooser.hidden = true;
     reportFlowTop.hidden = false;
     reportFlowTitle.textContent = reportTitles[kind] || '';
@@ -741,6 +744,10 @@
 
     if (kind === 'progress') {
       document.getElementById('progressReportObserved').value = now;
+    }
+
+    if (kind === 'bulk') {
+      resetBulkUpdate();
     }
   }
 
@@ -774,6 +781,320 @@
   document.getElementById('changeReportTypeBtn').addEventListener('click', showReportChooser);
   communityBackdrop.addEventListener('click', closeCommunity);
   document.querySelectorAll('[data-report-kind]').forEach(btn => btn.addEventListener('click', () => setReportKind(btn.dataset.reportKind)));
+
+  // Bulk unit update: keypad-first, deterministic and validated against the project dataset.
+  const bulkReportFlow = document.getElementById('bulkReportFlow');
+  const bulkBlockStep = document.getElementById('bulkBlockStep');
+  const bulkUnitsStep = document.getElementById('bulkUnitsStep');
+  const bulkReviewStep = document.getElementById('bulkReviewStep');
+  const bulkBlockInput = document.getElementById('bulkBlockInput');
+  const bulkBlockHint = document.getElementById('bulkBlockHint');
+  const bulkBlockNextBtn = document.getElementById('bulkBlockNextBtn');
+  const bulkUnitsHeading = document.getElementById('bulkUnitsHeading');
+  const bulkUnitInput = document.getElementById('bulkUnitInput');
+  const bulkUnitHint = document.getElementById('bulkUnitHint');
+  const bulkUnitChips = document.getElementById('bulkUnitChips');
+  const bulkAnotherBlockBtn = document.getElementById('bulkAnotherBlockBtn');
+  const bulkReviewBtn = document.getElementById('bulkReviewBtn');
+  const bulkReviewGroups = document.getElementById('bulkReviewGroups');
+  const bulkReviewCount = document.getElementById('bulkReviewCount');
+  const bulkSubmitBtn = document.getElementById('bulkSubmitBtn');
+  const bulkSubmitProgress = document.getElementById('bulkSubmitProgress');
+  const validBulkBlocks = new Set(DATA.blocks.map(block => block.id));
+  const bulkEntries = new Map();
+  let bulkCurrentBlock = '';
+  let bulkStep = 'block';
+
+  const bulkEntryCount = () => [...bulkEntries.values()].reduce((total, set) => total + set.size, 0);
+  const bulkUnitsForBlock = blockCode => new Set(blockUnits(blockCode).map(u => `${floorNumber(u.floor)}-${u.stack}`));
+
+  function setBulkHint(el, text, tone = '') {
+    el.textContent = text;
+    el.className = `bulk-entry-hint${tone ? ` ${tone}` : ''}`;
+  }
+
+  function setBulkStep(step) {
+    bulkStep = step;
+    bulkBlockStep.hidden = step !== 'block';
+    bulkUnitsStep.hidden = step !== 'units';
+    bulkReviewStep.hidden = step !== 'review';
+    document.querySelectorAll('[data-bulk-step-dot]').forEach(dot => {
+      const order = {block:1, units:2, review:3};
+      const dotStep = dot.dataset.bulkStepDot;
+      dot.classList.toggle('active', dotStep === step);
+      dot.classList.toggle('done', order[dotStep] < order[step]);
+    });
+  }
+
+  function updateBulkBlockState() {
+    const clean = bulkBlockInput.value.toUpperCase().replace(/[^0-9AB]/g, '').slice(0, 4);
+    if (bulkBlockInput.value !== clean) bulkBlockInput.value = clean;
+    const valid = validBulkBlocks.has(clean);
+    bulkBlockNextBtn.disabled = !valid;
+    bulkBlockInput.classList.toggle('valid', valid);
+    bulkBlockInput.classList.toggle('invalid', clean.length === 4 && !valid);
+    if (!clean) setBulkHint(bulkBlockHint, 'Choose a Berlayar Rise block.');
+    else if (valid) setBulkHint(bulkBlockHint, `Block ${clean} recognised.`, 'success');
+    else if (clean.length === 4) setBulkHint(bulkBlockHint, `${clean} is not a Berlayar Rise block.`, 'error');
+    else setBulkHint(bulkBlockHint, 'Enter 3 numbers followed by A or B.');
+  }
+
+  function renderBulkUnitChips() {
+    const set = bulkEntries.get(bulkCurrentBlock) || new Set();
+    bulkUnitChips.innerHTML = set.size
+      ? [...set].sort().map(unit => `<button type="button" class="bulk-unit-chip" data-remove-bulk-unit="${unit}" aria-label="Remove unit ${unit}"><span>#${unit}</span><b>×</b></button>`).join('')
+      : '<span class="bulk-empty-units">Detected units will appear here.</span>';
+    const total = bulkEntryCount();
+    bulkAnotherBlockBtn.disabled = set.size === 0;
+    bulkReviewBtn.disabled = total === 0;
+    bulkReviewBtn.textContent = total ? `Review ${total}` : 'Review';
+  }
+
+  function addBulkUnit(unitCode) {
+    if (!bulkCurrentBlock) return false;
+    const validUnits = bulkUnitsForBlock(bulkCurrentBlock);
+    if (!validUnits.has(unitCode)) {
+      setBulkHint(bulkUnitHint, `#${unitCode} does not exist in Block ${bulkCurrentBlock}.`, 'error');
+      return false;
+    }
+    if (!bulkEntries.has(bulkCurrentBlock)) bulkEntries.set(bulkCurrentBlock, new Set());
+    const set = bulkEntries.get(bulkCurrentBlock);
+    if (set.has(unitCode)) {
+      setBulkHint(bulkUnitHint, `#${unitCode} is already in this update.`, 'warning');
+      return true;
+    }
+    set.add(unitCode);
+    setBulkHint(bulkUnitHint, `Added #${unitCode}. Keep entering units.`, 'success');
+    renderBulkUnitChips();
+    return true;
+  }
+
+  function consumeBulkUnitInput() {
+    let stream = bulkUnitInput.value.replace(/[^0-9-]/g, '').replace(/-+/g, '-');
+    let consumedAny = false;
+
+    while (stream) {
+      let match = stream.match(/^(\d{2})-(\d{3})/);
+      let length = match ? match[0].length : 0;
+      let code = match ? `${match[1]}-${match[2]}` : '';
+
+      if (!match) {
+        match = stream.match(/^(\d)-(\d{3})/);
+        if (match) {
+          length = match[0].length;
+          code = `${match[1].padStart(2, '0')}-${match[2]}`;
+        }
+      }
+
+      if (!match && /^\d{5}/.test(stream)) {
+        code = `${stream.slice(0, 2)}-${stream.slice(2, 5)}`;
+        length = 5;
+        match = [stream.slice(0, 5)];
+      }
+
+      if (!match) break;
+      if (!addBulkUnit(code)) {
+        bulkUnitInput.value = stream;
+        return;
+      }
+      stream = stream.slice(length);
+      consumedAny = true;
+    }
+
+    if (/^\d{2,4}$/.test(stream)) stream = `${stream.slice(0,2)}-${stream.slice(2)}`;
+    bulkUnitInput.value = stream;
+    if (!stream && !consumedAny && bulkCurrentBlock) {
+      setBulkHint(bulkUnitHint, 'The dash is added automatically after the floor number.');
+    }
+  }
+
+  function beginBulkUnits() {
+    const blockCode = bulkBlockInput.value.toUpperCase();
+    if (!validBulkBlocks.has(blockCode)) return;
+    bulkCurrentBlock = blockCode;
+    bulkUnitsHeading.textContent = `Block ${blockCode}`;
+    bulkUnitInput.value = '';
+    setBulkHint(bulkUnitHint, 'The dash is added automatically after the floor number.');
+    renderBulkUnitChips();
+    setBulkStep('units');
+    bulkUnitInput.focus({preventScroll:true});
+  }
+
+  function beginAnotherBulkBlock() {
+    bulkCurrentBlock = '';
+    bulkBlockInput.value = '';
+    updateBulkBlockState();
+    setBulkStep('block');
+    bulkBlockInput.focus({preventScroll:true});
+  }
+
+  function renderBulkReview() {
+    const groups = [...bulkEntries.entries()].filter(([,set]) => set.size);
+    bulkReviewGroups.innerHTML = groups.map(([block, set]) => `
+      <div class="bulk-review-group">
+        <div class="bulk-review-group-head"><strong>Block ${block}</strong><span>${set.size} unit${set.size === 1 ? '' : 's'}</span></div>
+        <div class="bulk-review-units">${[...set].sort().map(unit => `<button type="button" data-review-remove="${block}|${unit}" aria-label="Remove ${block} ${unit}"><span>#${unit}</span><b>×</b></button>`).join('')}</div>
+      </div>`).join('');
+    const total = bulkEntryCount();
+    bulkReviewCount.textContent = `${total} unit${total === 1 ? '' : 's'}`;
+    bulkSubmitBtn.disabled = total === 0;
+    bulkSubmitBtn.textContent = total ? `Confirm ${total} taken` : 'Confirm taken';
+  }
+
+  function openBulkReview() {
+    if (!bulkEntryCount()) return;
+    renderBulkReview();
+    bulkSubmitProgress.hidden = true;
+    bulkSubmitProgress.className = 'bulk-submit-progress';
+    bulkSubmitProgress.textContent = '';
+    setBulkStep('review');
+  }
+
+  function resetBulkUpdate() {
+    bulkEntries.clear();
+    bulkCurrentBlock = '';
+    bulkBlockInput.value = '';
+    bulkUnitInput.value = '';
+    updateBulkBlockState();
+    setBulkHint(bulkUnitHint, 'The dash is added automatically after the floor number.');
+    bulkSubmitProgress.hidden = true;
+    renderBulkUnitChips();
+    setBulkStep('block');
+  }
+
+  document.getElementById('bulkBlockKeypad').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.action === 'clear') bulkBlockInput.value = '';
+    else if (btn.dataset.action === 'backspace') bulkBlockInput.value = bulkBlockInput.value.slice(0,-1);
+    else if (btn.dataset.key && bulkBlockInput.value.length < 4) bulkBlockInput.value += btn.dataset.key;
+    updateBulkBlockState();
+  });
+
+  bulkBlockInput.addEventListener('input', updateBulkBlockState);
+  bulkBlockInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !bulkBlockNextBtn.disabled) {
+      e.preventDefault();
+      beginBulkUnits();
+    }
+  });
+  bulkBlockNextBtn.addEventListener('click', beginBulkUnits);
+
+  document.getElementById('bulkUnitKeypad').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.action === 'clear') {
+      bulkUnitInput.value = '';
+      setBulkHint(bulkUnitHint, 'Entry cleared. Detected units are kept.');
+      return;
+    }
+    if (btn.dataset.action === 'backspace') {
+      bulkUnitInput.value = bulkUnitInput.value.slice(0,-1);
+      if (bulkUnitInput.value.endsWith('-')) bulkUnitInput.value = bulkUnitInput.value.slice(0,-1);
+      setBulkHint(bulkUnitHint, 'Keep entering the unit number.');
+      return;
+    }
+    if (btn.dataset.key) {
+      bulkUnitInput.value += btn.dataset.key;
+      const digitsOnly = bulkUnitInput.value.replace(/-/g, '');
+      if (!bulkUnitInput.value.includes('-') && digitsOnly.length === 2) bulkUnitInput.value += '-';
+      consumeBulkUnitInput();
+    }
+  });
+
+  bulkUnitInput.addEventListener('input', consumeBulkUnitInput);
+  bulkUnitChips.addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove-bulk-unit]');
+    if (!btn || !bulkCurrentBlock) return;
+    bulkEntries.get(bulkCurrentBlock)?.delete(btn.dataset.removeBulkUnit);
+    if (bulkEntries.get(bulkCurrentBlock)?.size === 0) bulkEntries.delete(bulkCurrentBlock);
+    renderBulkUnitChips();
+    setBulkHint(bulkUnitHint, `Removed #${btn.dataset.removeBulkUnit}.`);
+  });
+
+  document.getElementById('bulkChangeBlockBtn').addEventListener('click', beginAnotherBulkBlock);
+  bulkAnotherBlockBtn.addEventListener('click', beginAnotherBulkBlock);
+  bulkReviewBtn.addEventListener('click', openBulkReview);
+  document.getElementById('bulkBackToUnitsBtn').addEventListener('click', () => {
+    if (!bulkCurrentBlock || !validBulkBlocks.has(bulkCurrentBlock)) {
+      const firstBlock = [...bulkEntries.keys()][0];
+      bulkCurrentBlock = firstBlock || '';
+    }
+    if (!bulkCurrentBlock) return beginAnotherBulkBlock();
+    bulkUnitsHeading.textContent = `Block ${bulkCurrentBlock}`;
+    renderBulkUnitChips();
+    setBulkStep('units');
+  });
+  document.getElementById('bulkAddMoreBtn').addEventListener('click', beginAnotherBulkBlock);
+
+  bulkReviewGroups.addEventListener('click', e => {
+    const btn = e.target.closest('[data-review-remove]');
+    if (!btn) return;
+    const [block, unit] = btn.dataset.reviewRemove.split('|');
+    bulkEntries.get(block)?.delete(unit);
+    if (bulkEntries.get(block)?.size === 0) bulkEntries.delete(block);
+    renderBulkReview();
+  });
+
+  bulkSubmitBtn.addEventListener('click', async () => {
+    const entries = [...bulkEntries.entries()].flatMap(([block, set]) => [...set].map(unit => ({block, unit})));
+    if (!entries.length) return;
+    if (!communityDbReady || !communityClient) {
+      bulkSubmitProgress.hidden = false;
+      bulkSubmitProgress.className = 'bulk-submit-progress error';
+      bulkSubmitProgress.textContent = 'Community updates are unavailable right now.';
+      return;
+    }
+
+    bulkSubmitBtn.disabled = true;
+    document.getElementById('bulkAddMoreBtn').disabled = true;
+    bulkSubmitProgress.hidden = false;
+    bulkSubmitProgress.className = 'bulk-submit-progress';
+    const observedAt = new Date().toISOString();
+    const failed = [];
+    let submitted = 0;
+
+    for (let i = 0; i < entries.length; i++) {
+      const item = entries[i];
+      bulkSubmitProgress.textContent = `Submitting ${i + 1} of ${entries.length} · ${item.block} #${item.unit}`;
+      try {
+        const { error } = await communityClient.rpc('submit_unit_report', {
+          p_block_code: item.block,
+          p_unit_no: item.unit,
+          p_status: 'taken',
+          p_observed_at: observedAt,
+          p_source_type: 'hdb_selection',
+          p_source_note: 'Bulk unit update',
+          p_evidence_url: '',
+          p_reporter_token: reporterToken
+        });
+        if (error) throw error;
+        submitted += 1;
+        bulkEntries.get(item.block)?.delete(item.unit);
+        if (bulkEntries.get(item.block)?.size === 0) bulkEntries.delete(item.block);
+      } catch (err) {
+        console.error(err);
+        failed.push(item);
+      }
+    }
+
+    if (submitted) await refreshCommunityData();
+    document.getElementById('bulkAddMoreBtn').disabled = false;
+
+    if (!failed.length) {
+      const count = submitted;
+      resetBulkUpdate();
+      showReportChooser();
+      showReportResult(`${count} taken unit update${count === 1 ? '' : 's'} submitted.`, true);
+      return;
+    }
+
+    renderBulkReview();
+    bulkSubmitBtn.disabled = false;
+    bulkSubmitProgress.hidden = false;
+    bulkSubmitProgress.className = 'bulk-submit-progress error';
+    bulkSubmitProgress.textContent = `${submitted} submitted. ${failed.length} could not be submitted and remain in the list.`;
+  });
 
   async function runSubmission(form, rpcName, payload, successText) {
     if (!communityDbReady || !communityClient) {
