@@ -604,3 +604,480 @@ button,select{font:inherit} button{color:inherit}
   .level-unit-type{font-size:9px}
   .level-unit-price{font-size:8px}
 }
+
+
+/* ==================================================================
+   V1.8 — Premium map / civic utility polish
+   ================================================================== */
+:root{
+  --ease-ui:cubic-bezier(.2,.78,.28,1);
+  --ease-snap:cubic-bezier(.2,.9,.26,1);
+  --focus-ring:0 0 0 3px rgba(216,240,158,.14);
+}
+
+/* Interaction language */
+button,.unit-cell,.level-unit-card,.metric,.source-item{
+  -webkit-tap-highlight-color:transparent;
+}
+button{
+  transition:
+    border-color .18s ease,
+    background-color .18s ease,
+    color .18s ease,
+    opacity .18s ease,
+    box-shadow .18s ease,
+    transform .18s var(--ease-ui);
+}
+button:active{transform:translateY(1px) scale(.985)}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible{
+  outline:none;
+  box-shadow:var(--focus-ring);
+}
+.tap-animate{
+  animation:tapGlow .42s ease-out!important;
+}
+@keyframes tapGlow{
+  0%{box-shadow:0 0 0 0 rgba(216,240,158,.32)}
+  100%{box-shadow:0 0 0 9px rgba(216,240,158,0)}
+}
+
+/* Header: quiet, civic, useful */
+.topbar{
+  border-bottom-color:rgba(221,236,227,.11);
+  box-shadow:0 12px 35px rgba(0,0,0,.18);
+}
+.top-actions{align-items:center}
+.ghost-btn{
+  min-height:38px;
+  border-radius:6px;
+  padding:9px 12px;
+  font-size:11px;
+  font-weight:720;
+  letter-spacing:.01em;
+}
+.ghost-btn:hover{
+  background:rgba(255,255,255,.055);
+  transform:translateY(-1px);
+}
+.ghost-btn.primary{
+  box-shadow:0 5px 18px rgba(216,240,158,.11);
+}
+.ghost-btn.primary:hover{
+  background:#e1f6aa;
+  box-shadow:0 8px 24px rgba(216,240,158,.18);
+}
+.filter-trigger{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#dce9df;
+}
+.filter-trigger>span{
+  color:var(--muted);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.filter-trigger>strong{
+  font-size:11px;
+  font-weight:800;
+}
+.filter-trigger>i{
+  color:var(--accent);
+  font-style:normal;
+  font-size:13px;
+  transition:transform .2s var(--ease-ui);
+}
+.filter-trigger[aria-expanded="true"]>i{transform:rotate(180deg)}
+.filter-trigger.has-filter{
+  border-color:rgba(216,240,158,.45);
+  background:rgba(216,240,158,.065);
+}
+.icon-btn.compact{width:30px;height:30px;font-size:18px}
+
+/* Flat-type chooser lives where users look first, not below the page. */
+.flat-type-menu{
+  position:fixed;
+  z-index:72;
+  top:66px;
+  right:96px;
+  width:min(370px,calc(100vw - 24px));
+  padding:12px;
+  background:rgba(11,25,21,.965);
+  border:1px solid rgba(216,240,158,.2);
+  box-shadow:0 24px 70px rgba(0,0,0,.48);
+  backdrop-filter:blur(18px);
+  border-radius:8px;
+  transform-origin:85% 0;
+  animation:flatTypeMenuIn .22s var(--ease-snap);
+}
+.flat-type-menu[hidden]{display:none!important}
+@keyframes flatTypeMenuIn{
+  from{opacity:0;transform:translateY(-7px) scale(.975)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.flat-type-menu-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  padding:3px 2px 10px;
+}
+.flat-type-menu-head>div{display:grid;gap:4px}
+.flat-type-menu-head>div>strong{font-size:16px}
+.flat-type-options{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.flat-type-option{
+  min-width:0;
+  min-height:68px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 11px;
+  text-align:left;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#10231e;
+  color:var(--text);
+  cursor:pointer;
+}
+.flat-type-option:first-child{grid-column:1/-1}
+.flat-type-option>span{display:grid;gap:2px;min-width:0}
+.flat-type-option strong{font-size:11px}
+.flat-type-option small{
+  color:var(--muted);
+  font-size:8px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.flat-type-option>b{
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:10px;
+  font-variant-numeric:tabular-nums;
+}
+.flat-type-option:hover{
+  border-color:rgba(216,240,158,.34);
+  background:#132a23;
+  transform:translateY(-1px);
+}
+.flat-type-option.active{
+  border-color:var(--accent);
+  background:rgba(216,240,158,.095);
+}
+.flat-type-option.active strong,
+.flat-type-option.active>b{color:var(--accent)}
+
+/* The old below-the-fold filter section is intentionally gone. */
+.controls-panel{display:none!important}
+
+/* Scene overlays: less "debug dashboard", more map utility. */
+.project-card,
+.layers,
+.legend,
+.notice{
+  border-radius:7px;
+}
+.project-card{
+  border-left:3px solid rgba(216,240,158,.72);
+  box-shadow:0 18px 48px rgba(0,0,0,.28);
+  animation:uiRiseIn .46s var(--ease-snap) both;
+}
+.layers{animation:uiRiseIn .48s .06s var(--ease-snap) both}
+.legend{animation:uiRiseIn .48s .10s var(--ease-snap) both}
+.notice{animation:uiRiseIn .48s .14s var(--ease-snap) both}
+@keyframes uiRiseIn{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Building identity plates */
+.block-label{
+  min-width:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+  overflow:visible;
+  transform:translate(-50%,-100%);
+}
+.block-label:hover{
+  border-color:transparent;
+  transform:translate(-50%,calc(-100% - 3px));
+}
+.block-label-copy{
+  position:relative;
+  display:grid;
+  min-width:76px;
+  gap:1px;
+  padding:7px 9px 8px;
+  text-align:left;
+  background:rgba(8,19,16,.9);
+  border:1px solid rgba(221,236,227,.18);
+  border-left:2px solid rgba(216,240,158,.72);
+  border-radius:5px;
+  box-shadow:0 9px 26px rgba(0,0,0,.30);
+  backdrop-filter:blur(10px);
+  transition:
+    border-color .18s ease,
+    background-color .18s ease,
+    box-shadow .18s ease;
+}
+.block-label:hover .block-label-copy{
+  border-color:rgba(216,240,158,.42);
+  border-left-color:var(--accent);
+  background:rgba(10,24,20,.96);
+  box-shadow:0 13px 32px rgba(0,0,0,.38);
+}
+.block-label-copy small{
+  color:#789287;
+  font-size:6px;
+  font-weight:900;
+  letter-spacing:.18em;
+}
+.block-label-copy strong{
+  font-size:14px;
+  line-height:1;
+  letter-spacing:.025em;
+}
+.block-label-copy>span{
+  margin-top:3px;
+  color:#b7c9be;
+  font-size:8px;
+  font-weight:650;
+  white-space:nowrap;
+}
+.block-label-pointer{
+  position:absolute;
+  left:50%;
+  bottom:-8px;
+  width:1px;
+  height:8px;
+  background:rgba(216,240,158,.58);
+}
+.block-label-pointer::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  bottom:-3px;
+  width:5px;
+  height:5px;
+  border:1px solid rgba(216,240,158,.72);
+  background:#0c1c18;
+  border-radius:50%;
+  transform:translateX(-50%);
+}
+.block-label.dimmed{
+  opacity:.14;
+  pointer-events:none;
+}
+
+/* Project summary becomes a useful status ribbon rather than a wall of boxes. */
+.summary-strip{
+  background:#0a1613;
+}
+.metric{
+  transition:background-color .18s ease;
+}
+.metric:hover{
+  background:rgba(255,255,255,.018);
+}
+.metric strong{
+  letter-spacing:-.025em;
+}
+
+/* Drawers / panels */
+.drawer{
+  transition:transform .34s var(--ease-snap);
+  border-left-color:rgba(216,240,158,.14);
+}
+.drawer.open{box-shadow:-28px 0 90px rgba(0,0,0,.52)}
+.drawer-head{
+  background:rgba(255,255,255,.012);
+}
+.drawer-toolbar select{
+  border-radius:5px;
+  transition:border-color .18s ease,background-color .18s ease;
+}
+.drawer-toolbar select:hover{border-color:rgba(216,240,158,.28)}
+.quota-card{border-radius:6px}
+.community-panel{
+  transition:transform .34s var(--ease-snap);
+  border-left-color:rgba(216,240,158,.14);
+}
+.community-backdrop{
+  animation:backdropIn .2s ease both;
+}
+@keyframes backdropIn{from{opacity:0}to{opacity:1}}
+
+/* Flat selector hierarchy */
+.selector-view-switch{
+  gap:6px;
+  padding:10px 14px 4px;
+}
+.selector-view-btn{
+  min-height:36px;
+  padding:7px 13px;
+  border-radius:5px;
+}
+.selector-view-btn.active{
+  box-shadow:inset 0 0 0 1px rgba(216,240,158,.08);
+}
+.unit-grid-hint{
+  padding-top:8px;
+}
+.unit-cell{
+  border-radius:3px;
+  transition:
+    transform .14s var(--ease-ui),
+    border-color .14s ease,
+    background-color .14s ease,
+    opacity .14s ease;
+}
+.unit-cell:hover{
+  transform:translateY(-2px);
+  box-shadow:0 5px 14px rgba(0,0,0,.18);
+}
+.quick-unit-bar{
+  animation:quickBarIn .22s var(--ease-snap);
+  box-shadow:0 -14px 36px rgba(0,0,0,.30);
+}
+@keyframes quickBarIn{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.quick-status-btn{
+  border-radius:5px;
+}
+.level-chip,
+.level-unit-card{
+  border-radius:5px;
+}
+.level-unit-card{
+  transition:
+    transform .16s var(--ease-ui),
+    border-color .16s ease,
+    background-color .16s ease,
+    box-shadow .16s ease;
+}
+.level-unit-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 7px 18px rgba(0,0,0,.18);
+}
+
+/* Reports feel responsive without becoming theatrical. */
+.chat-choice,
+.submit-report-btn,
+.status-choice span{
+  border-radius:5px;
+}
+.chat-choice:hover{transform:translateY(-1px)}
+.report-flow:not([hidden]){
+  animation:reportFlowIn .24s var(--ease-snap);
+}
+@keyframes reportFlowIn{
+  from{opacity:0;transform:translateX(9px)}
+  to{opacity:1;transform:translateX(0)}
+}
+.report-result:not([hidden]){
+  animation:uiRiseIn .24s var(--ease-snap);
+}
+
+/* Dialogs */
+dialog[open]{
+  animation:dialogIn .22s var(--ease-snap);
+}
+dialog::backdrop{animation:backdropIn .2s ease both}
+@keyframes dialogIn{
+  from{opacity:0;transform:translateY(8px) scale(.99)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+/* Mobile: the two primary actions remain reachable without consuming the screen. */
+@media(max-width:760px){
+  .top-actions{gap:5px}
+  .filter-trigger{
+    padding:7px 8px!important;
+    gap:4px;
+  }
+  .filter-trigger>span{display:none}
+  .filter-trigger>strong{font-size:10px}
+  .filter-trigger>i{font-size:11px}
+  #communityReportBtn{font-size:10px!important}
+
+  .flat-type-menu{
+    top:56px;
+    left:8px;
+    right:8px;
+    width:auto;
+    padding:10px;
+    border-radius:7px;
+    transform-origin:70% 0;
+  }
+  .flat-type-menu-head{padding-bottom:8px}
+  .flat-type-menu-head>div>strong{font-size:14px}
+  .flat-type-options{gap:6px}
+  .flat-type-option{
+    min-height:61px;
+    padding:9px;
+  }
+  .flat-type-option strong{font-size:10px}
+  .flat-type-option small{font-size:7px}
+  .flat-type-option>b{font-size:9px}
+
+  .block-label-copy{
+    min-width:50px;
+    padding:5px 6px 6px;
+    border-left-width:1px;
+  }
+  .block-label-copy small{display:none}
+  .block-label-copy strong{font-size:11px}
+  .block-label-copy>span{
+    display:block;
+    max-width:66px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:6.5px;
+  }
+  .block-label-pointer{height:6px;bottom:-6px}
+  .block-label-pointer::after{width:4px;height:4px}
+
+  .selector-view-switch{
+    padding:7px 9px 3px;
+  }
+  .selector-view-btn{
+    min-height:33px;
+    padding:6px 8px;
+  }
+}
+
+@media(max-width:430px){
+  .brand h1{font-size:14px}
+  .filter-trigger>strong{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #communityReportBtn{padding-left:7px!important;padding-right:7px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .flat-type-menu,
+  .project-card,
+  .layers,
+  .legend,
+  .notice,
+  .quick-unit-bar,
+  .report-flow:not([hidden]),
+  .report-result:not([hidden]),
+  dialog[open],
+  dialog::backdrop,
+  .community-backdrop,
+  .tap-animate{
+    animation:none!important;
+  }
+}

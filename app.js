@@ -132,7 +132,7 @@
   let selectedBlock = null;
   let selectedUnit = null;
   let selectedFloor = null;
-  let selectorView = 'level';
+  let selectorView = 'all';
 
   const levelViewBtn = document.getElementById('levelViewBtn');
   const allFloorsViewBtn = document.getElementById('allFloorsViewBtn');
@@ -151,6 +151,83 @@
   const quickAvailableBtn = document.getElementById('quickAvailableBtn');
   const quickDetailsBtn = document.getElementById('quickDetailsBtn');
 
+  // ---------- Primary flat-type selector ----------
+  let activeType = 'all';
+  const flatTypeBtn = document.getElementById('flatTypeBtn');
+  const flatTypeBtnValue = document.getElementById('flatTypeBtnValue');
+  const flatTypeMenu = document.getElementById('flatTypeMenu');
+  const closeFlatTypeMenuBtn = document.getElementById('closeFlatTypeMenuBtn');
+
+  const flatTypeButtonLabels = {
+    all: 'All flats',
+    '2R-T1': '2R Type 1',
+    '2R-T2': '2R Type 2',
+    '3R': '3-Room',
+    '4R': '4-Room'
+  };
+
+  function positionFlatTypeMenu() {
+    const rect = flatTypeBtn.getBoundingClientRect();
+    flatTypeMenu.style.top = `${Math.round(rect.bottom + 7)}px`;
+
+    if (window.innerWidth <= 760) {
+      flatTypeMenu.style.left = '8px';
+      flatTypeMenu.style.right = '8px';
+      flatTypeMenu.style.width = 'auto';
+      return;
+    }
+
+    const menuWidth = Math.min(370, window.innerWidth - 24);
+    const left = Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12));
+    flatTypeMenu.style.left = `${Math.round(left)}px`;
+    flatTypeMenu.style.right = 'auto';
+    flatTypeMenu.style.width = `${menuWidth}px`;
+  }
+
+  function setFlatTypeMenu(open) {
+    if (open) positionFlatTypeMenu();
+    flatTypeMenu.hidden = !open;
+    flatTypeBtn.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('flat-type-menu-open', open);
+    if (open) {
+      requestAnimationFrame(() => flatTypeMenu.querySelector('.flat-type-option.active')?.focus({preventScroll:true}));
+    }
+  }
+
+  window.addEventListener('resize', () => {
+    if (!flatTypeMenu.hidden) positionFlatTypeMenu();
+  });
+
+  function syncFlatTypeTrigger(type) {
+    flatTypeBtnValue.textContent = flatTypeButtonLabels[type] || 'All flats';
+    flatTypeBtn.classList.toggle('has-filter', type !== 'all');
+  }
+
+  flatTypeBtn.addEventListener('click', () => setFlatTypeMenu(flatTypeMenu.hidden));
+  closeFlatTypeMenuBtn.addEventListener('click', () => setFlatTypeMenu(false));
+
+  document.addEventListener('pointerdown', e => {
+    if (flatTypeMenu.hidden) return;
+    if (flatTypeMenu.contains(e.target) || flatTypeBtn.contains(e.target)) return;
+    setFlatTypeMenu(false);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !flatTypeMenu.hidden) {
+      setFlatTypeMenu(false);
+      flatTypeBtn.focus();
+    }
+  });
+
+  // Lightweight click feedback for controls without adding a UI library.
+  document.addEventListener('click', e => {
+    const target = e.target.closest('button, .unit-cell, .level-unit-card');
+    if (!target || target.disabled) return;
+    target.classList.remove('tap-animate');
+    void target.offsetWidth;
+    target.classList.add('tap-animate');
+    window.setTimeout(() => target.classList.remove('tap-animate'), 430);
+  });
 
   // ---------- V1.4.1 shared community data (Supabase / riseblock only) ----------
   const communityPanel = document.getElementById('communityPanel');
@@ -523,7 +600,7 @@
     selectedUnit = null;
     const floors = residentialFloors(block);
     selectedFloor = floors.length ? floors[floors.length - 1] : null;
-    setSelectorView('level');
+    setSelectorView('all');
     quickUnitBar.hidden = true;
     quickUnitFeedback.textContent = '';
     if (window.__berlayarFlyToBlock) window.__berlayarFlyToBlock(block);
@@ -536,7 +613,7 @@
     document.getElementById('drawerAvailable').textContent = availableCount(c).toLocaleString();
     document.getElementById('drawerTotal').textContent = block.total.toLocaleString();
     document.getElementById('drawerWait').textContent = `${block.waitMonths} mo`;
-    document.getElementById('drawerTypeFilter').value = 'all';
+    document.getElementById('drawerTypeFilter').value = activeType;
     document.getElementById('drawerStatusFilter').value = 'all';
     renderUnitGrid();
     renderQuotaForSelectedBlock();
@@ -956,7 +1033,6 @@
     const linkObjects = [];
     const contextObjects = [];
     const planLabelObjects = [];
-    let activeType = 'all';
     let cameraTween = null;
     let floorHighlight = null;
     let unitHighlight = null;
@@ -1202,8 +1278,25 @@
       for(const block of DATA.blocks){
         const el=labels.get(block.id);
         if(!el) continue;
-        const c=statusCounts(blockUnits(block.id));
-        el.innerHTML=`<strong>${block.id}</strong><span>${c.confirmed_taken.toLocaleString()} / ${block.total.toLocaleString()} taken</span>`;
+
+        const allBlockUnits = blockUnits(block.id);
+        const c = statusCounts(allBlockUnits);
+        const matching = activeType === 'all'
+          ? allBlockUnits
+          : allBlockUnits.filter(u => u.type === activeType);
+
+        const meta = activeType === 'all'
+          ? `${availableCount(c).toLocaleString()} available`
+          : `${matching.length.toLocaleString()} ${flatTypeButtonLabels[activeType]}`;
+
+        el.innerHTML = `
+          <span class="block-label-copy">
+            <small>BLOCK</small>
+            <strong>${block.id}</strong>
+            <span>${meta}</span>
+          </span>
+          <span class="block-label-pointer" aria-hidden="true"></span>
+        `;
       }
     }
     for(const block of DATA.blocks){
@@ -1321,12 +1414,33 @@
     });
 
     document.getElementById('typeFilters').addEventListener('click',e=>{
-      const btn=e.target.closest('[data-type]');if(!btn)return;activeType=btn.dataset.type;
+      const btn=e.target.closest('[data-type]');
+      if(!btn)return;
+
+      activeType=btn.dataset.type;
       document.querySelectorAll('#typeFilters .filter').forEach(b=>b.classList.toggle('active',b===btn));
+      syncFlatTypeTrigger(activeType);
+      setFlatTypeMenu(false);
+
       for(const block of DATA.blocks){
-        const has=activeType==='all'||block.stacks.some(s=>s.type===activeType); const g=blockGroups.get(block.id);
-        g.traverse(obj=>{if(obj.isMesh&&obj!==floorHighlight&&obj!==unitHighlight){obj.material.transparent=!has;obj.material.opacity=has?1:.18;}});
+        const has=activeType==='all'||block.stacks.some(s=>s.type===activeType);
+        const g=blockGroups.get(block.id);
+        g.traverse(obj=>{
+          if(obj.isMesh&&obj!==floorHighlight&&obj!==unitHighlight){
+            obj.material.transparent=!has;
+            obj.material.opacity=has?1:.14;
+          }
+        });
         labels.get(block.id).classList.toggle('dimmed',!has);
+      }
+
+      refreshBlockLabels();
+
+      if (selectedBlock) {
+        document.getElementById('drawerTypeFilter').value = activeType;
+        selectedUnit = null;
+        quickUnitBar.hidden = true;
+        renderUnitGrid();
       }
     });
 

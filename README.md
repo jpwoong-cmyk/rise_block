@@ -216,3 +216,11 @@ It is not strong identity verification. A determined person can still reset a br
 - Each card shows unit number, flat type, listed price and current status.
 - Tapping a flat keeps the existing one-tap Taken / Available / Details action bar.
 - The original floor x stack matrix remains available under All floors for power users.
+
+## V1.8 UX / visual pass
+- All Floors is now the default block selector.
+- Flat Type moved into the sticky top bar as a primary control beside Report Update.
+- The flat-type control expands into an animated chooser and updates the 3D estate plus block unit view.
+- Building labels were redesigned as compact map identity plates with an anchored marker.
+- Added restrained motion for button clicks, panel entrances, drawers, report flows and dialogs.
+- Motion respects prefers-reduced-motion.
