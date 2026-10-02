@@ -1,9 +1,18 @@
 /*
-  Berlayar Rise public-source seed data.
-  Static project/unit structure is source-informed. Dynamic availability is not an HDB live feed.
-  Site-feature coordinates are schematic placements interpreted from the published project site plan.
+  Berlayar Rise public-source seed data — V1.3.
+
+  DATA FIDELITY RULES
+  - verified: directly supported by an HDB/public brochure table, unit-distribution chart,
+    site-plan label, or an explicitly named public source.
+  - crossChecked: supported by a secondary public project guide and consistent with the
+    published site-plan material.
+  - schematic: x/z coordinates and simplified 3D footprints are visual interpretations
+    for orientation only. They are NOT surveyed coordinates or BIM geometry.
+  - live flat status is NOT sourced from HDB. All units begin as "untracked".
 */
 window.BERLAYAR_DATA = {
+  version: "1.3",
+
   project: {
     name: "Berlayar Rise",
     town: "Bukit Merah",
@@ -12,7 +21,9 @@ window.BERLAYAR_DATA = {
     totalUnits: 1976,
     residentialBlocks: 6,
     subsidyRecoveryPct: 14,
-    note: "Community tracker; not affiliated with HDB. Availability is not an HDB live feed."
+    statusBaseline: "untracked",
+    note: "Community tracker; not affiliated with HDB. No Singpass access and no HDB live-availability feed.",
+    geometryNote: "Estate geometry is a source-plan sketch for orientation, not a survey or BIM model."
   },
 
   flatTypes: {
@@ -25,7 +36,7 @@ window.BERLAYAR_DATA = {
       color: 0xe8a07d,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162648/Berlayar-Rise-2-Room-Flexi-Type-1.jpg",
       rooms: ["Living / dining", "Bedroom", "Kitchen", "Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Compact one-bedroom layout with the kitchen grouped near the entrance and the household shelter beside the living/dining zone. The schematic below is not to scale.",
+      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
       plan: "2R-T1"
     },
     "2R-T2": {
@@ -37,7 +48,7 @@ window.BERLAYAR_DATA = {
       color: 0xd96d5d,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162703/Berlayar-Rise-2-Room-Flexi-Type-2.jpg",
       rooms: ["Living / dining", "Bedroom", "Flexible space", "Kitchen", "Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Adds a flexible space beside the bedroom, giving the Type 2 plan a study/extra-room zone while retaining a separate kitchen and household shelter. The schematic below is not to scale.",
+      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
       plan: "2R-T2"
     },
     "3R": {
@@ -49,7 +60,7 @@ window.BERLAYAR_DATA = {
       color: 0x91c779,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162714/Berlayar-Rise-3-Room-1600x1132.jpg",
       rooms: ["Living / dining", "Bedroom", "Main bedroom", "Dry kitchen", "Kitchen / utility", "2 Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "The published layout separates a dry-kitchen zone from the kitchen/utility area and places the two bedrooms along the outer edge. The schematic below is not to scale.",
+      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
       plan: "3R"
     },
     "4R": {
@@ -61,7 +72,7 @@ window.BERLAYAR_DATA = {
       color: 0xe2d15a,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162814/Berlayar-Rise-4-Room-1600x1132.jpg",
       rooms: ["Living / dining", "2 Bedrooms", "Main bedroom", "Kitchen", "Service yard", "2 Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Three-bedroom layout with a separate service yard beside the kitchen and two bathrooms grouped near the bedroom corridor. The schematic below is not to scale.",
+      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
       plan: "4R"
     }
   },
@@ -71,197 +82,303 @@ window.BERLAYAR_DATA = {
     "2R-T2": {15:[99000,136000],20:[119000,163000],25:[135000,185000],30:[148000,203000],35:[160000,219000],40:[169000,232000],45:[177000,243000]}
   },
 
+  /*
+    Unit-distribution fields below are transcribed from the public Berlayar Rise
+    elevation / unit-distribution charts. Each generated total is validated in app.js.
+    `terraceLevels` are non-residential sky-terrace levels shown in those charts.
+    `roofGardenAtTop` is used only where an accessible roof garden is explicitly shown.
+  */
   blocks: [
     {
       id: "200A", storeys: 46, total: 344, waitMonths: 54,
-      floors: { min: 2, max: 46, exclude: [9,29] },
+      floors: { min: 2, max: 46, terraceLevels: [9,29] },
+      roofGardenAtTop: false,
       stacks: [
         {no:"101",type:"3R"},{no:"103",type:"3R"},{no:"105",type:"2R-T1"},{no:"107",type:"2R-T1"},
         {no:"109",type:"4R"},{no:"111",type:"4R"},{no:"113",type:"4R"},{no:"115",type:"4R"}
       ],
-      model: { x:-15.2, z:-10.2, rotationY:-0.08, width:8.7, depth:3.4 }
+      model: { x:-15.4, z:-10.8, rotationY:-0.07, width:8.8, depth:3.5 },
+      distributionSource: "elevation-200"
     },
     {
       id: "200B", storeys: 49, total: 368, waitMonths: 54,
-      floors: { min: 2, max: 49, exclude: [20,40] },
+      floors: { min: 2, max: 49, terraceLevels: [20,40] },
+      roofGardenAtTop: false,
       stacks: [
         {no:"117",type:"2R-T2"},{no:"119",type:"2R-T2"},{no:"121",type:"2R-T2"},{no:"123",type:"2R-T2"},
         {no:"125",type:"4R"},{no:"127",type:"4R"},{no:"129",type:"4R"},{no:"131",type:"4R"}
       ],
-      model: { x:-3.1, z:-12.8, rotationY:0.06, width:9.4, depth:3.5 }
+      model: { x:-3.4, z:-13.2, rotationY:0.05, width:9.2, depth:3.5 },
+      distributionSource: "elevation-200"
     },
     {
       id: "201A", storeys: 49, total: 360, waitMonths: 54,
-      floors: { min: 2, max: 48, exclude: [9,30], roofGarden: 49 },
+      floors: { min: 2, max: 48, terraceLevels: [9,30] },
+      roofGardenAtTop: true,
+      roofGardenLabel: "Accessible roof garden shown at the top of the published elevation",
       stacks: [
         {no:"133",type:"2R-T2"},{no:"135",type:"2R-T2"},{no:"137",type:"2R-T2"},{no:"139",type:"2R-T2"},
         {no:"141",type:"4R"},{no:"143",type:"4R"},{no:"145",type:"4R"},{no:"147",type:"4R"}
       ],
-      model: { x:9.1, z:-10.3, rotationY:0.08, width:9.2, depth:3.5 }
+      model: { x:9.0, z:-10.8, rotationY:0.08, width:9.1, depth:3.5 },
+      distributionSource: "elevation-201"
     },
     {
       id: "201B", storeys: 46, total: 344, waitMonths: 49,
-      floors: { min: 2, max: 46, exclude: [22,37] },
+      floors: { min: 2, max: 46, terraceLevels: [22,37] },
+      roofGardenAtTop: true,
+      roofGardenLabel: "Accessible roof garden shown at the top of the published elevation",
       stacks: [
         {no:"149",type:"4R"},{no:"151",type:"4R"},{no:"153",type:"4R"},{no:"155",type:"4R"},
         {no:"157",type:"2R-T1"},{no:"159",type:"2R-T1"},{no:"161",type:"3R"},{no:"163",type:"3R"}
       ],
-      model: { x:0.0, z:1.6, rotationY:-0.12, width:9.2, depth:3.6 },
-      groundAmenities: ["Residents’ Network Centre"]
+      model: { x:-0.4, z:1.0, rotationY:-0.10, width:9.2, depth:3.6 },
+      groundAmenities: ["Residents’ Network Centre"],
+      distributionSource: "elevation-201"
     },
     {
       id: "204A", storeys: 39, total: 304, waitMonths: 49,
-      floors: { min: 2, max: 39, exclude: [] },
+      floors: { min: 2, max: 39, terraceLevels: [] },
+      roofGardenAtTop: false,
       stacks: [
         {no:"100",type:"4R"},{no:"102",type:"4R"},{no:"104",type:"4R"},{no:"106",type:"4R"},
         {no:"108",type:"2R-T2"},{no:"110",type:"2R-T2"},{no:"112",type:"2R-T2"},{no:"114",type:"2R-T2"}
       ],
-      model: { x:-5.8, z:13.0, rotationY:0.06, width:9.1, depth:3.5 }
+      model: { x:-5.8, z:12.6, rotationY:0.05, width:9.0, depth:3.5 },
+      distributionSource: "elevation-204"
     },
     {
       id: "204B", storeys: 33, total: 256, waitMonths: 49,
-      floors: { min: 2, max: 33, exclude: [] },
+      floors: { min: 2, max: 33, terraceLevels: [] },
+      roofGardenAtTop: true,
+      roofGardenLabel: "Accessible roof garden shown at the top of the published elevation",
       stacks: [
         {no:"116",type:"4R"},{no:"118",type:"4R"},{no:"120",type:"4R"},{no:"122",type:"4R"},
         {no:"124",type:"2R-T2"},{no:"126",type:"2R-T2"},{no:"128",type:"2R-T2"},{no:"130",type:"2R-T2"}
       ],
-      model: { x:-16.5, z:18.0, rotationY:-0.12, width:9.1, depth:3.5 }
+      model: { x:-16.5, z:17.8, rotationY:-0.10, width:9.0, depth:3.5 },
+      distributionSource: "elevation-204"
     }
   ],
 
-  /* Coordinates below map the published site plan into the simplified 3D scene.
-     They are intended for orientation, not surveying or construction use. */
+  /*
+    Site-feature coordinates are deliberately approximate. Names/existence are source-backed;
+    the x/z positions are a hand-built orientation sketch based on the published site plan.
+  */
   siteFeatures: [
     {
-      id: "mrt", category: "transport", name: "Telok Blangah MRT", short: "MRT",
-      x: 2.7, z: -31.2, height: 1.7,
-      detail: "Circle Line station immediately north of the project, across the Telok Blangah Road / West Coast Highway edge. The published project material shows sheltered-linkway connectivity toward the station.",
-      basis: "Public site plan + published project review"
+      id: "mrt", category: "transport", name: "Telok Blangah MRT Station", short: "Telok Blangah MRT",
+      x: 2.2, z: -31.2, height: 1.7, confidence: "verified",
+      detail: "The published Berlayar Rise site plan places Telok Blangah MRT Station immediately north of the project, beyond Telok Blangah Road / West Coast Highway.",
+      geometry: "schematic", sourceIds: ["brochure","masterplan"]
     },
     {
-      id: "preschool", category: "community", name: "3-storey Preschool", short: "Preschool",
-      x: 20.7, z: -6.5, height: 2.5,
-      detail: "Separate 3-storey preschool building with a green roof, positioned on the eastern side of the precinct in the published site plan.",
-      basis: "Public site plan"
+      id: "preschool", category: "community", name: "3-storey Preschool", short: "3-storey preschool",
+      x: 20.7, z: -5.2, height: 2.5, confidence: "verified",
+      detail: "The site-plan legend identifies a 3-storey preschool with a non-accessible green roof. The building mass here is a simplified orientation model.",
+      geometry: "schematic", sourceIds: ["brochure"]
     },
     {
-      id: "mscp", category: "amenity", name: "Block 203 · 6-storey MSCP", short: "MSCP + shops",
-      x: 13.0, z: 9.1, height: 3.2,
-      detail: "Multi-storey car park. Published information lists a supermarket, eating house, restaurants/cafes and shops on the first storey, with a roof garden, fitness facilities and shelters above.",
-      basis: "Public site plan + published project information"
+      id: "mscp", category: "amenity", name: "Block 203 · 6-storey MSCP", short: "203 · MSCP",
+      x: 12.1, z: 8.1, height: 3.2, confidence: "verified",
+      detail: "The published plan identifies Block 203 as a 6-storey multi-storey car park with an accessible roof garden. Public project guides also list first-storey commercial uses including an eating house, supermarket, restaurants/cafes and shops.",
+      geometry: "schematic", sourceIds: ["brochure","dollarsandsense"]
     },
     {
       id: "rn", category: "community", name: "Residents’ Network Centre", short: "RN Centre",
-      x: -0.2, z: 3.6, height: 0.8,
-      detail: "Residents’ Network Centre reported on the first storey of Block 201B.",
-      basis: "Published project guide"
+      x: 0.4, z: 3.0, height: 0.8, confidence: "verified",
+      detail: "The published unit-distribution chart marks a Residents’ Network Centre at the ground level of Block 201B; public project guides also identify it at the first storey of Block 201B.",
+      geometry: "schematic", sourceIds: ["elevation-201","dollarsandsense"]
     },
     {
-      id: "pavilion", category: "community", name: "Precinct Pavilion", short: "Pavilion",
-      x: -17.4, z: 2.4, height: 0.8,
-      detail: "Community pavilion area interpreted from the published site plan. Placement in this 3D model is schematic.",
-      basis: "Public site plan"
+      id: "community-zone", category: "community", name: "Community / communal spaces", short: "Community space",
+      x: -18.0, z: 2.6, height: 0.8, confidence: "verified",
+      detail: "The published site-plan legend includes precinct pavilion(s), drop-off porch(es) and space reserved for future community use. This marker groups those communal uses without claiming an exact building footprint.",
+      geometry: "schematic", sourceIds: ["brochure"]
     },
     {
-      id: "play", category: "recreation", name: "Nature-themed Playgrounds", short: "Playgrounds",
-      x: -14.2, z: 5.8, height: 0.5,
-      detail: "The project includes nature-themed playgrounds. The model groups the play areas into a simplified landscape cluster rather than reproducing construction geometry.",
-      basis: "Public project information + site plan"
+      id: "play", category: "recreation", name: "Children’s playground areas", short: "Play areas",
+      x: -13.4, z: 5.7, height: 0.5, confidence: "verified",
+      detail: "Children’s playground facilities are identified in the site-plan legend. The model uses a grouped marker rather than reproducing every source-plan symbol.",
+      geometry: "schematic", sourceIds: ["brochure","design"]
     },
     {
-      id: "fitness", category: "recreation", name: "Fitness Areas", short: "Fitness",
-      x: 5.6, z: 8.8, height: 0.5,
-      detail: "Fitness corners/stations are part of the project. Ground-level markers and the MSCP roof facilities are schematic representations.",
-      basis: "Public project information + site plan"
+      id: "fitness", category: "recreation", name: "Adult & elderly fitness areas", short: "Fitness areas",
+      x: 4.7, z: 8.2, height: 0.5, confidence: "verified",
+      detail: "Adult and elderly fitness stations are identified in the site-plan legend. Their 3D geometry here is simplified.",
+      geometry: "schematic", sourceIds: ["brochure"]
     },
     {
       id: "hardcourt", category: "recreation", name: "Hardcourt", short: "Hardcourt",
-      x: 19.1, z: 0.9, height: 0.3,
-      detail: "Hardcourt shown as part of the project’s recreation facilities. Geometry and placement are simplified from the public site plan.",
-      basis: "Public project information + site plan"
+      x: 18.2, z: 1.0, height: 0.3, confidence: "verified",
+      detail: "A hardcourt is included in the site-plan play-facility legend. This 3D pad is a simplified source-plan marker.",
+      geometry: "schematic", sourceIds: ["brochure"]
     },
     {
-      id: "roofshelters", category: "recreation", name: "MSCP Roof Garden Shelters", short: "Roof shelters",
-      x: 13.0, z: 10.7, height: 3.8,
-      detail: "Shelters are listed among the recreation facilities on the MSCP roof garden. The two canopy forms in this model are schematic rather than construction geometry.",
-      basis: "Published project information"
+      id: "roofshelters", category: "recreation", name: "MSCP roof-garden shelters", short: "Roof shelters",
+      x: 12.1, z: 9.8, height: 3.8, confidence: "crossChecked",
+      detail: "Public project material describes shelters and recreation facilities on the MSCP roof garden. The canopies in this tracker are symbolic, not construction geometry.",
+      geometry: "schematic", sourceIds: ["stacked"]
     },
     {
-      id: "linkways", category: "community", name: "Sheltered Linkway Network", short: "Sheltered links",
-      x: 3.4, z: -3.2, height: 1.1,
-      detail: "Published project information states that sheltered linkways connect the residential blocks to the MSCP, Telok Blangah MRT station and future bus stops. The routes drawn here are simplified from the public site plan.",
-      basis: "Public site plan + published project review"
+      id: "linkways", category: "community", name: "Sheltered linkway network", short: "Sheltered links",
+      x: 3.3, z: -3.0, height: 1.1, confidence: "crossChecked",
+      detail: "Public project analysis states that sheltered linkways connect the residential blocks to the MSCP, Telok Blangah MRT and future bus stops. The routes drawn here are a connectivity sketch, not surveyed alignments.",
+      geometry: "schematic", sourceIds: ["brochure","stacked"]
     },
     {
-      id: "futurepark", category: "context", name: "Site reserved for park", short: "Future park",
-      x: 11.3, z: 31.0, height: 0.1,
-      detail: "Land south of the project is labelled as reserved for a park in the published site plan.",
-      basis: "Public site plan"
+      id: "future-bus-west", category: "transport", name: "Future bus stop · west side", short: "Future bus stop",
+      x: -28.2, z: 6.6, height: 0.4, confidence: "crossChecked",
+      detail: "Public site-plan analysis describes three future bus stops serving the project. Marker positions in this model are schematic interpretations of the plan.",
+      geometry: "schematic", sourceIds: ["stacked","brochure"]
     },
     {
-      id: "futurehousing-east", category: "context", name: "Future residential development", short: "Future housing",
-      x: 31.4, z: 8.5, height: 0.1,
-      detail: "Adjacent eastern land is labelled for future high-rise residential development in the published site plan.",
-      basis: "Public site plan"
+      id: "future-bus-south-1", category: "transport", name: "Future bus stop · Berlayar Drive", short: "Future bus stop",
+      x: -1.5, z: 29.0, height: 0.4, confidence: "crossChecked",
+      detail: "One of three future bus-stop markers represented from public site-plan material. Position is schematic.",
+      geometry: "schematic", sourceIds: ["stacked","brochure"]
+    },
+    {
+      id: "future-bus-south-2", category: "transport", name: "Future bus stop · Berlayar Drive", short: "Future bus stop",
+      x: 16.0, z: 28.0, height: 0.4, confidence: "crossChecked",
+      detail: "One of three future bus-stop markers represented from public site-plan material. Position is schematic.",
+      geometry: "schematic", sourceIds: ["stacked","brochure"]
+    },
+    {
+      id: "futurepark-nw", category: "context", name: "Site reserved for park · north-west", short: "Future park",
+      x: -25.0, z: -25.0, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels land at the north-west edge as a site reserved for park.",
+      geometry: "schematic", sourceIds: ["brochure"]
+    },
+    {
+      id: "futurepark-south", category: "context", name: "Site reserved for park · south", short: "Future park",
+      x: 9.5, z: 32.0, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels land south of the precinct as a site reserved for park.",
+      geometry: "schematic", sourceIds: ["brochure"]
+    },
+    {
+      id: "publichousing-west", category: "context", name: "Public housing · under construction", short: "Public housing U/C",
+      x: -33.2, z: -3.0, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels the parcel west of Berlayar Street as public housing under construction.",
+      geometry: "schematic", sourceIds: ["brochure"]
+    },
+    {
+      id: "futurehousing-east", category: "context", name: "Site reserved for future high-rise residential development", short: "Future housing",
+      x: 31.7, z: 6.0, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels adjacent land for future high-rise residential development.",
+      geometry: "schematic", sourceIds: ["brochure"]
+    },
+    {
+      id: "futurehousing-sw", category: "context", name: "Site reserved for future high-rise residential development", short: "Future housing",
+      x: -24.0, z: 32.8, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels southern adjacent land for future high-rise residential development.",
+      geometry: "schematic", sourceIds: ["brochure"]
+    },
+    {
+      id: "futurehousing-se", category: "context", name: "Site reserved for future high-rise residential development", short: "Future housing",
+      x: 29.5, z: 33.0, height: 0.1, confidence: "verified",
+      detail: "The public site plan labels southern adjacent land for future high-rise residential development.",
+      geometry: "schematic", sourceIds: ["brochure"]
     }
   ],
 
-  roads: [
-    { name: "Telok Blangah Road / West Coast Highway", x: 0, z: -28.2, w: 68, d: 6.5, rotation: 0 },
-    { name: "Berlayar Street", x: -29.2, z: 1.7, w: 5.6, d: 55, rotation: -0.03 },
-    { name: "Berlayar Drive", x: 3.4, z: 27.5, w: 59, d: 5.5, rotation: 0.03 }
+  /* Labels for standalone numbered blocks visible on the published site plan.
+     Their function is intentionally NOT guessed here, except Block 203 which is separately verified as the MSCP. */
+  planOnlyBlockLabels: [
+    { id:"200", x:-20.7, z:-16.8 },
+    { id:"201", x:20.6, z:-15.0 },
+    { id:"202", x:21.2, z:17.8 },
+    { id:"204", x:-1.8, z:20.3 },
+    { id:"205", x:-25.0, z:21.0 }
   ],
 
+  roads: [
+    { name: "Telok Blangah Road / West Coast Highway", x: 0, z: -28.4, w: 68, d: 6.4, rotation: 0 },
+    { name: "Berlayar Street", x: -29.2, z: 1.2, w: 5.5, d: 56, rotation: -0.035 },
+    { name: "Berlayar Drive", x: 2.6, z: 27.5, w: 58, d: 5.4, rotation: 0.025 }
+  ],
+
+  /* Connectivity only: routes are intentionally schematic. */
   shelteredLinks: [
-    { from: [-18.0,-10.5], to: [-4.5,-12.7] },
-    { from: [-3.0,-14.7], to: [2.7,-28.6] },
-    { from: [-1.0,-10.2], to: [8.0,-10.3] },
-    { from: [8.7,-8.0], to: [1.2,0.0] },
-    { from: [1.3,3.7], to: [10.0,8.6] },
-    { from: [-1.7,3.8], to: [-5.1,11.1] },
-    { from: [-6.5,15.0], to: [-15.0,17.0] }
+    { from: [-18.0,-10.7], to: [-5.1,-12.9] },
+    { from: [-3.3,-14.8], to: [2.2,-28.1] },
+    { from: [-1.2,-10.8], to: [7.8,-10.8] },
+    { from: [8.5,-8.0], to: [0.8,0.0] },
+    { from: [1.0,3.1], to: [9.0,7.7] },
+    { from: [-1.8,3.5], to: [-5.1,10.8] },
+    { from: [-6.4,14.8], to: [-15.0,16.7] }
   ],
 
   sources: [
     {
+      id: "brochure",
+      tier: "primary",
+      name: "HDB — Berlayar Rise sales brochure (June 2026)",
+      url: "https://assets.hdb.gov.sg/residential/buying-a-flat/finding-a-flat/sales-brochure/26JUNBTO_pdf_selection/berlayar_rise.pdf",
+      use: "Primary visual source for the Berlayar Rise site plan, site-plan legend, block/storey information, unit-distribution/elevation charts and published flat layouts."
+    },
+    {
+      id: "annex-a",
+      tier: "primary",
+      name: "HDB — Annex A: June 2026 BTO flat supply and pricing details",
+      url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf",
+      use: "Official flat-type totals, floor areas, indicative 99-year price ranges and estimated waiting-time range."
+    },
+    {
+      id: "launch",
+      tier: "primary",
       name: "HDB — June 2026 BTO launch announcement",
       url: "https://www.hdb.gov.sg/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise",
-      use: "Official project classification and June 2026 launch context."
+      use: "Official project classification and 14% subsidy-recovery rate for Berlayar Rise."
     },
     {
-      name: "HDB — Annex A: Jun 2026 BTO Flat Supply and Pricing Details",
-      url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf",
-      use: "Official unit totals, flat areas, indicative 99-year price ranges, 2-Room Flexi lease ranges and estimated waiting times."
+      id: "design",
+      tier: "primary",
+      name: "HDB Awards — Berlayar Residences & Berlayar Rise",
+      url: "https://building-partner.hdb.gov.sg/awardwinners-projectshowcase/hdb-design-award/berlayar-residences---berlayar-rise/",
+      use: "Official design description confirming Berlayar Rise has 1,976 homes across six blocks of 33–49 storeys, with staggered/stepped massing, sky gardens and rooftop landscapes."
     },
     {
+      id: "masterplan",
+      tier: "primary",
       name: "HDB — Berlayar estate masterplan",
       url: "https://www.hdb.gov.sg/hdb-pulse/news/2025/hdb-unveils-masterplan-for-berlayar-estate",
-      use: "Public context on Berlayar green corridors, walking/cycling connections and MRT access."
+      use: "Official wider-estate context, connectivity and Telok Blangah MRT relationship."
     },
     {
-      name: "BTOHQ — Berlayar Rise project page & public site plan",
-      url: "https://www.btohq.com/bto-project-spec/berlayar-rise",
-      use: "Public site plan used to interpret block positions, Telok Blangah MRT, MSCP, preschool, community/recreation facilities and surrounding reserved sites."
+      id: "elevation-200",
+      tier: "mirror",
+      name: "99.co — public mirror of Berlayar Rise unit distribution: Blocks 200A / 200B",
+      url: "https://www.99.co/singapore/hdb/200a-berlayar-street-adJnvqJrRpcePmbBDALNDjZB",
+      use: "Publicly accessible mirror used to manually cross-check stack numbers, flat types and sky-terrace levels against the HDB brochure."
     },
     {
-      name: "Public Berlayar Rise site-plan image",
-      url: "https://btohq.sgp1.cdn.digitaloceanspaces.com/bto/jun-2026-bto/projects/berlayar-rise/gallery/site-plan.jpg",
-      use: "Site-plan reference for the 3D orientation layer."
+      id: "elevation-201",
+      tier: "mirror",
+      name: "99.co — public mirror of Berlayar Rise unit distribution: Blocks 201A / 201B",
+      url: "https://www.99.co/singapore/hdb/201a-berlayar-street-adZAkWWT6HqBvyE5gBwzWaa",
+      use: "Public mirror used to cross-check stack/type distribution, sky terraces, roof-garden labels and the Residents’ Network Centre marker."
     },
     {
-      name: "99.co — Berlayar Rise site plan & elevation charts",
+      id: "elevation-204",
+      tier: "mirror",
+      name: "99.co — Berlayar Rise site/elevation material",
       url: "https://www.99.co/singapore/hdb/berlayar-rise---prime-de1ykFxT10z80WICTzZfAC0W",
-      use: "Publicly accessible site/elevation references used to map residential stacks, flat types and residential levels."
+      use: "Public mirror used to cross-check the 204A/204B unit-distribution chart and the overall site-plan image."
     },
     {
+      id: "stacked",
+      tier: "secondary",
       name: "Stacked Homes — June 2026 BTO launch review",
       url: "https://stackedhomes.com/june-2026-bto-launch-review/",
-      use: "Cross-check for facilities, sheltered linkways, block completion groups and public floor-plan layouts used to create the app's original schematic floor plans."
+      use: "Secondary cross-check for two drop-off points, sheltered-linkway connectivity, three future bus stops and publicly shown flat-layout images."
     },
     {
+      id: "dollarsandsense",
+      tier: "secondary",
       name: "DollarsAndSense — June 2026 BTO sales launch guide",
       url: "https://dollarsandsense.sg/june-2026-bto-sales-launch-guide-ang-mo-kio-bishan-lakeview-berlayar-sembawang-north/",
-      use: "Cross-check for first-storey MSCP commercial uses and the Residents’ Network Centre at Block 201B."
+      use: "Secondary cross-check for first-storey MSCP commercial uses and the Residents’ Network Centre at Block 201B."
     }
   ]
 };

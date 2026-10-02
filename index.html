@@ -18,6 +18,7 @@
       </div>
     </div>
     <div class="top-actions">
+      <button id="planViewBtn" class="ghost-btn" type="button">Plan view</button>
       <button id="resetViewBtn" class="ghost-btn" type="button">Reset view</button>
       <button id="sourcesBtn" class="ghost-btn" type="button">Sources</button>
     </div>
@@ -33,9 +34,9 @@
       <div class="scene-vignette" aria-hidden="true"></div>
 
       <div class="project-card glass">
-        <div class="project-kicker">JUNE 2026 BTO · PRIME</div>
+        <div class="project-kicker">JUNE 2026 BTO · PRIME · V1.3</div>
         <div class="project-title">Explore the precinct</div>
-        <p>Drag to rotate · scroll to zoom · click a block or site feature</p>
+        <p>Drag to rotate · scroll to zoom · click a block or source-backed site feature</p>
         <div class="project-tags">
           <span>6 residential blocks</span>
           <span>1,976 flats</span>
@@ -51,21 +52,21 @@
       </div>
 
       <div class="legend glass" aria-label="Flat status legend">
-        <div><span class="dot available"></span>Available baseline</div>
+        <div><span class="dot untracked"></span>Untracked</div>
+        <div><span class="dot available"></span>Confirmed available</div>
         <div><span class="dot reported"></span>Reported taken</div>
-        <div><span class="dot taken"></span>Taken</div>
-        <div><span class="dot unknown"></span>Unknown</div>
+        <div><span class="dot taken"></span>Confirmed taken</div>
       </div>
 
       <div class="notice glass">
-        <strong>Source-informed model, not a survey drawing.</strong>
-        <span>Building and facility positions are interpreted from the published site plan. Community availability is not an HDB live feed.</span>
+        <strong>Verified data, schematic geometry.</strong>
+        <span>Block / stack / flat-type / level data is source-checked. 3D placement is an orientation sketch, not surveyed geometry. Flat status starts untracked, not “available”.</span>
       </div>
     </section>
 
     <section class="summary-strip" aria-label="Project summary">
       <div class="metric"><span>Total flats</span><strong id="totalUnits">1,976</strong></div>
-      <div class="metric"><span>Available</span><strong id="availableUnits">1,976</strong></div>
+      <div class="metric"><span>Untracked</span><strong id="untrackedUnits">1,976</strong></div>
       <div class="metric"><span>Reported</span><strong id="reportedUnits">0</strong></div>
       <div class="metric"><span>Taken</span><strong id="takenUnits">0</strong></div>
       <div class="metric compact"><span>2-Room Flexi</span><strong>816</strong></div>
@@ -96,11 +97,12 @@
         <h2 id="drawerBlockName">Block 200A</h2>
         <p id="drawerBlockMeta"></p>
         <p id="drawerGroundMeta" class="drawer-ground-meta"></p>
+        <p id="drawerSpecialMeta" class="drawer-ground-meta"></p>
       </div>
     </div>
 
     <div class="drawer-stats">
-      <div><span>Available</span><strong id="drawerAvailable">0</strong></div>
+      <div><span>Untracked</span><strong id="drawerUntracked">0</strong></div>
       <div><span>Total</span><strong id="drawerTotal">0</strong></div>
       <div><span>Wait</span><strong id="drawerWait">—</strong></div>
     </div>
@@ -120,15 +122,15 @@
         <span>Status</span>
         <select id="drawerStatusFilter">
           <option value="all">All statuses</option>
-          <option value="available">Available</option>
+          <option value="untracked">Untracked</option>
+          <option value="available">Confirmed available</option>
           <option value="reported">Reported taken</option>
-          <option value="taken">Taken</option>
-          <option value="unknown">Unknown</option>
+          <option value="taken">Confirmed taken</option>
         </select>
       </label>
     </div>
 
-    <div class="unit-grid-hint">Select a unit to open its flat-level view and schematic floor plan.</div>
+    <div class="unit-grid-hint">Select a unit to open its source-derived elevation position and schematic flat layout. Sky-terrace rows are shown explicitly.</div>
     <div class="unit-table-wrap">
       <table class="unit-table">
         <thead id="unitTableHead"></thead>
@@ -143,7 +145,7 @@
       <section class="unit-copy">
         <div class="breadcrumb">ESTATE <span>›</span> <span id="unitCrumbBlock">BLOCK</span> <span>›</span> UNIT</div>
         <h2 id="unitTitle">#12-105</h2>
-        <div id="unitStatusPill" class="status-pill available">Available</div>
+        <div id="unitStatusPill" class="status-pill untracked">Untracked</div>
 
         <dl class="unit-details">
           <div><dt>Block</dt><dd id="unitBlock"></dd></div>
@@ -156,14 +158,25 @@
         </dl>
 
         <div class="unit-subsection">
+          <div class="eyebrow">SOURCE CERTAINTY</div>
+          <div class="certainty-grid">
+            <div><span>Stack / flat type</span><strong>Verified</strong></div>
+            <div><span>Residential level</span><strong>Verified</strong></div>
+            <div><span>Live availability</span><strong id="unitAvailabilityCertainty">Untracked</strong></div>
+            <div><span>3D façade position</span><strong>Schematic</strong></div>
+          </div>
+        </div>
+
+        <div class="unit-subsection">
           <div class="eyebrow">LAYOUT CONTENT</div>
           <div id="unitRooms" class="room-chips"></div>
           <p id="unitLayoutNote" class="unit-layout-note"></p>
         </div>
 
         <div class="unit-actions">
-          <button id="focusFloorBtn" class="action-btn" type="button">Highlight this floor in 3D</button>
-          <a id="unitPlanSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">View public floor-plan source ↗</a>
+          <button id="focusFloorBtn" class="action-btn" type="button">Locate this unit on the tower</button>
+          <a id="unitDistributionSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">View unit-distribution source ↗</a>
+          <a id="unitPlanSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">View public flat-plan source ↗</a>
         </div>
 
         <div class="unit-note">
@@ -172,16 +185,30 @@
         <button class="report-btn" type="button" disabled>Community reporting connects after shared storage</button>
       </section>
 
-      <section class="floorplan-panel" aria-label="Schematic unit floor plan">
-        <div class="floorplan-head">
-          <div>
-            <div class="eyebrow">ONE LEVEL DEEPER</div>
-            <h3 id="floorplanTitle">Flat layout</h3>
+      <section class="floorplan-panel" aria-label="Unit elevation and schematic flat layout">
+        <div class="elevation-section">
+          <div class="floorplan-head">
+            <div>
+              <div class="eyebrow">EXACT SOURCE-DERIVED LEVEL</div>
+              <h3 id="elevationTitle">Block elevation</h3>
+            </div>
+            <span>Stack order + levels</span>
           </div>
-          <span>Schematic · not to scale</span>
+          <div id="unitElevation" class="unit-elevation" aria-label="Source-derived block unit distribution"></div>
+          <p class="floorplan-disclaimer">This elevation reproduces the published stack order and residential / sky-terrace levels as data. It does not claim the selected stack’s compass-facing façade.</p>
         </div>
-        <div id="floorplanCanvas" class="floorplan-canvas"></div>
-        <p class="floorplan-disclaimer">This is an original simplified diagram built from the publicly shown room arrangement. Use the linked public source for the published plan and dimensions.</p>
+
+        <div class="flatplan-section">
+          <div class="floorplan-head">
+            <div>
+              <div class="eyebrow">FLAT-TYPE LAYOUT</div>
+              <h3 id="floorplanTitle">Flat layout</h3>
+            </div>
+            <span>Schematic · not to scale</span>
+          </div>
+          <div id="floorplanCanvas" class="floorplan-canvas"></div>
+          <p class="floorplan-disclaimer">Original simplified redraw from the publicly shown room arrangement. Use the linked source for the published plan and dimensions.</p>
+        </div>
       </section>
     </div>
   </dialog>
@@ -191,8 +218,9 @@
     <div class="eyebrow">SITE FEATURE</div>
     <h2 id="featureTitle"></h2>
     <p id="featureDetail"></p>
-    <div class="feature-basis"><span>Model basis</span><strong id="featureBasis"></strong></div>
-    <p class="source-footnote">Placement in the interactive model is for orientation and may not reproduce construction geometry or exact surveyed distances.</p>
+    <div class="feature-basis"><span>Evidence status</span><strong id="featureBasis"></strong></div>
+    <div id="featureSourceLinks" class="feature-source-links"></div>
+    <p class="source-footnote">Existence / description is source-backed as stated above. Placement in the interactive model is an orientation sketch and is not a surveyed distance or construction footprint.</p>
   </dialog>
 
   <dialog id="sourcesDialog" class="sources-dialog">
@@ -200,7 +228,7 @@
     <div class="eyebrow">PUBLIC DATA SOURCES</div>
     <h2>What the tracker is built from</h2>
     <div id="sourcesList" class="sources-list"></div>
-    <p class="source-footnote">The 3D model is a source-informed visual interpretation, not an HDB BIM model. Unit stack/type and level distribution are generated from public site/elevation material. Unit floor plans in this app are original simplified schematics and are not construction drawings.</p>
+    <p class="source-footnote">V1.3 separates source-backed facts from schematic geometry. Unit stack/type and residential-level data is reconciled against the public unit-distribution charts. 3D coordinates, paths and simplified building masses are orientation sketches, not HDB BIM/survey data. Live unit status is deliberately untracked until community reporting is connected.</p>
   </dialog>
 
   <script src="data/berlayar-data.js"></script>

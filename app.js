@@ -3,14 +3,24 @@
   const loadingEl = document.getElementById('sceneLoading');
   const DATA = window.BERLAYAR_DATA;
 
+  if (!DATA) {
+    if (loadingEl) loadingEl.innerHTML = '<strong>Data failed to load.</strong><span>berlayar-data.js is missing.</span>';
+    return;
+  }
+
+  const sourceMap = new Map(DATA.sources.map(s => [s.id, s]));
   const typeLabel = key => DATA.flatTypes[key]?.label || key;
   const money = n => new Intl.NumberFormat('en-SG', { style:'currency', currency:'SGD', maximumFractionDigits:0 }).format(n);
   const floorNumber = floor => String(floor).padStart(2, '0');
+  const terraceLevels = block => block.floors.terraceLevels || [];
+  const typeColorHex = type => `#${(DATA.flatTypes[type]?.color ?? 0x9aa39f).toString(16).padStart(6,'0')}`;
 
   function residentialFloors(block) {
-    const exclude = new Set(block.floors.exclude || []);
+    const nonResidential = new Set(terraceLevels(block));
     const floors = [];
-    for (let f = block.floors.min; f <= block.floors.max; f++) if (!exclude.has(f)) floors.push(f);
+    for (let f = block.floors.min; f <= block.floors.max; f++) {
+      if (!nonResidential.has(f)) floors.push(f);
+    }
     return floors;
   }
 
@@ -25,8 +35,8 @@
             floor,
             stack: stack.no,
             type: stack.type,
-            status: 'available',
-            basis: 'Initial published project supply; not live HDB availability.'
+            status: DATA.project.statusBaseline || 'untracked',
+            basis: 'Unit existence / stack / flat type is source-derived. Live selection status is not yet tracked.'
           });
         }
       }
@@ -38,17 +48,23 @@
 
   function validateData() {
     const errors = [];
+    const notes = [];
     if (units.length !== DATA.project.totalUnits) errors.push(`Generated ${units.length}, expected ${DATA.project.totalUnits}.`);
+
     for (const [type, meta] of Object.entries(DATA.flatTypes)) {
       const actual = units.filter(u => u.type === type).length;
       if (actual !== meta.total) errors.push(`${type}: ${actual}, expected ${meta.total}.`);
     }
+
     for (const block of DATA.blocks) {
       const actual = units.filter(u => u.block === block.id).length;
       if (actual !== block.total) errors.push(`${block.id}: ${actual}, expected ${block.total}.`);
+      if (block.stacks.length !== 8) notes.push(`${block.id}: expected 8 stack columns, found ${block.stacks.length}.`);
     }
-    if (errors.length) console.error('Berlayar dataset validation failed:', errors);
-    else console.info(`Berlayar dataset validated: ${units.length.toLocaleString()} units.`);
+
+    if (errors.length) console.error('Berlayar V1.3 dataset validation FAILED:', errors);
+    else console.info(`Berlayar V1.3 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals reconcile.`);
+    if (notes.length) console.info('Berlayar dataset notes:', notes);
   }
   validateData();
 
@@ -56,13 +72,22 @@
     return subset.reduce((acc, u) => {
       acc[u.status] = (acc[u.status] || 0) + 1;
       return acc;
-    }, {available:0, reported:0, taken:0, unknown:0});
+    }, {untracked:0, available:0, reported:0, taken:0});
+  }
+
+  function statusLabel(status) {
+    return ({
+      untracked: 'Untracked',
+      available: 'Confirmed available',
+      reported: 'Reported taken',
+      taken: 'Confirmed taken'
+    })[status] || status;
   }
 
   function updateSummary() {
     const c = statusCounts();
     document.getElementById('totalUnits').textContent = units.length.toLocaleString();
-    document.getElementById('availableUnits').textContent = c.available.toLocaleString();
+    document.getElementById('untrackedUnits').textContent = c.untracked.toLocaleString();
     document.getElementById('reportedUnits').textContent = c.reported.toLocaleString();
     document.getElementById('takenUnits').textContent = c.taken.toLocaleString();
   }
@@ -78,15 +103,23 @@
 
   function blockUnits(id) { return units.filter(u => u.block === id); }
 
+  function blockSpecialText(block) {
+    const parts = [];
+    if (terraceLevels(block).length) parts.push(`Sky terraces: ${terraceLevels(block).map(floorNumber).join(', ')}`);
+    if (block.roofGardenAtTop) parts.push('Accessible roof garden shown at top');
+    return parts.join(' · ');
+  }
+
   function openBlock(block) {
     selectedBlock = block;
     if (window.__berlayarFlyToBlock) window.__berlayarFlyToBlock(block);
     const subset = blockUnits(block.id);
     const c = statusCounts(subset);
     document.getElementById('drawerBlockName').textContent = `Block ${block.id}`;
-    document.getElementById('drawerBlockMeta').textContent = `${block.storeys} storeys · ${block.stacks.length} stacks · ${block.stacks.map(s=>s.no).join(', ')}`;
-    document.getElementById('drawerGroundMeta').textContent = block.groundAmenities?.length ? `Ground-level community use: ${block.groundAmenities.join(', ')}` : '';
-    document.getElementById('drawerAvailable').textContent = c.available.toLocaleString();
+    document.getElementById('drawerBlockMeta').textContent = `${block.storeys} storeys · ${block.stacks.length} stack columns · ${block.stacks.map(s=>s.no).join(', ')}`;
+    document.getElementById('drawerGroundMeta').textContent = block.groundAmenities?.length ? `Ground-level source marker: ${block.groundAmenities.join(', ')}` : '';
+    document.getElementById('drawerSpecialMeta').textContent = blockSpecialText(block);
+    document.getElementById('drawerUntracked').textContent = c.untracked.toLocaleString();
     document.getElementById('drawerTotal').textContent = block.total.toLocaleString();
     document.getElementById('drawerWait').textContent = `${block.waitMonths} mo`;
     document.getElementById('drawerTypeFilter').value = 'all';
@@ -104,27 +137,64 @@
   document.getElementById('drawerTypeFilter').addEventListener('change', renderUnitGrid);
   document.getElementById('drawerStatusFilter').addEventListener('change', renderUnitGrid);
 
+  function specialTableRow(label, detail = '') {
+    const tr = document.createElement('tr');
+    tr.className = 'special-level-row';
+    const th = document.createElement('th');
+    th.textContent = detail;
+    const td = document.createElement('td');
+    td.colSpan = selectedBlock.stacks.length;
+    td.innerHTML = `<div class="special-level-chip">${label}</div>`;
+    tr.append(th, td);
+    return tr;
+  }
+
   function renderUnitGrid() {
     if (!selectedBlock) return;
     const typeFilter = document.getElementById('drawerTypeFilter').value;
     const statusFilter = document.getElementById('drawerStatusFilter').value;
     const head = document.getElementById('unitTableHead');
     const body = document.getElementById('unitTableBody');
-    head.innerHTML = `<tr><th class="floor-head">Floor</th>${selectedBlock.stacks.map(s=>`<th><span>${s.no}</span><br><small>${typeLabel(s.type).replace('2-Room Flexi ','')}</small></th>`).join('')}</tr>`;
+    head.innerHTML = `<tr><th class="floor-head">Level</th>${selectedBlock.stacks.map(s=>`<th><span>${s.no}</span><br><small>${typeLabel(s.type).replace('2-Room Flexi ','')}</small></th>`).join('')}</tr>`;
     body.innerHTML = '';
-    const floors = residentialFloors(selectedBlock).sort((a,b)=>b-a);
+
     const byKey = new Map(blockUnits(selectedBlock.id).map(u=>[`${u.floor}-${u.stack}`,u]));
-    for (const floor of floors) {
+    const terraces = new Set(terraceLevels(selectedBlock));
+
+    if (selectedBlock.roofGardenAtTop && selectedBlock.storeys === selectedBlock.floors.max) {
+      body.appendChild(specialTableRow('ROOF GARDEN · ACCESSIBLE', 'TOP'));
+    }
+
+    for (let level = selectedBlock.storeys; level >= 1; level--) {
+      if (selectedBlock.roofGardenAtTop && level > selectedBlock.floors.max) {
+        body.appendChild(specialTableRow('ROOF GARDEN · ACCESSIBLE', floorNumber(level)));
+        continue;
+      }
+      if (terraces.has(level)) {
+        body.appendChild(specialTableRow('SKY TERRACE · ACCESSIBLE', floorNumber(level)));
+        continue;
+      }
+      if (level === 1) {
+        body.appendChild(specialTableRow(selectedBlock.groundAmenities?.length ? selectedBlock.groundAmenities.join(' · ') : 'NO SALE UNITS SHOWN IN DISTRIBUTION CHART', '01'));
+        continue;
+      }
+      if (level < selectedBlock.floors.min || level > selectedBlock.floors.max) continue;
+
       const tr = document.createElement('tr');
-      tr.innerHTML = `<th>${floorNumber(floor)}</th>`;
+      tr.innerHTML = `<th>${floorNumber(level)}</th>`;
       for (const stack of selectedBlock.stacks) {
-        const u = byKey.get(`${floor}-${stack.no}`);
+        const u = byKey.get(`${level}-${stack.no}`);
         const td = document.createElement('td');
+        if (!u) {
+          td.innerHTML = '<span class="unit-empty">—</span>';
+          tr.appendChild(td);
+          continue;
+        }
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `unit-cell ${u.status}`;
-        btn.textContent = `#${floorNumber(floor)}-${stack.no}`;
-        btn.title = `${typeLabel(u.type)} · ${u.status}`;
+        btn.textContent = `#${floorNumber(level)}-${stack.no}`;
+        btn.title = `${typeLabel(u.type)} · ${statusLabel(u.status)}`;
         if (typeFilter !== 'all' && u.type !== typeFilter) btn.classList.add('hidden-type');
         if (statusFilter !== 'all' && u.status !== statusFilter) btn.classList.add('hidden-status');
         btn.addEventListener('click', () => openUnit(u));
@@ -135,6 +205,7 @@
     }
   }
 
+  // ---------- Unit flat-plan redraws ----------
   function roomRect(x,y,w,h,label,kind='normal') {
     const safe = label.replace(/&/g,'&amp;');
     const words = safe.split(' ');
@@ -193,9 +264,47 @@
     return `<svg viewBox="0 0 760 500" role="img" aria-label="Simplified schematic floor plan for ${typeLabel(type)}"><rect class="plan-bg" x="12" y="12" width="736" height="476" rx="10"/>${rooms}</svg>`;
   }
 
+  function renderElevation(u) {
+    const block = DATA.blocks.find(b => b.id === u.block);
+    const terraces = new Set(terraceLevels(block));
+    let html = `<div class="elevation-grid" style="--stack-count:${block.stacks.length}">`;
+    html += `<div class="elev-corner">LV</div>${block.stacks.map(s=>`<div class="elev-stack"><strong>${s.no}</strong><small>${typeLabel(s.type).replace('2-Room Flexi ','')}</small></div>`).join('')}`;
+
+    if (block.roofGardenAtTop && block.storeys === block.floors.max) {
+      html += `<div class="elev-level top-label">TOP</div><div class="elev-special roof" style="grid-column:2 / span ${block.stacks.length}">ROOF GARDEN · ACCESSIBLE</div>`;
+    }
+
+    for (let level = block.storeys; level >= 1; level--) {
+      if (block.roofGardenAtTop && level > block.floors.max) {
+        html += `<div class="elev-level">${floorNumber(level)}</div><div class="elev-special roof" style="grid-column:2 / span ${block.stacks.length}">ROOF GARDEN · ACCESSIBLE</div>`;
+        continue;
+      }
+      if (terraces.has(level)) {
+        html += `<div class="elev-level">${floorNumber(level)}</div><div class="elev-special terrace" style="grid-column:2 / span ${block.stacks.length}">SKY TERRACE · ACCESSIBLE</div>`;
+        continue;
+      }
+      if (level === 1) {
+        const ground = block.groundAmenities?.join(' · ') || 'NO SALE UNITS';
+        html += `<div class="elev-level">01</div><div class="elev-special ground" style="grid-column:2 / span ${block.stacks.length}">${ground}</div>`;
+        continue;
+      }
+      if (level < block.floors.min || level > block.floors.max) continue;
+      html += `<div class="elev-level">${floorNumber(level)}</div>`;
+      for (const stack of block.stacks) {
+        const selected = level === u.floor && stack.no === u.stack;
+        html += `<div class="elev-unit${selected?' selected':''}" style="--unit-color:${typeColorHex(stack.type)}" title="#${floorNumber(level)}-${stack.no} · ${typeLabel(stack.type)}">${selected?'<span>●</span>':''}</div>`;
+      }
+    }
+    html += '</div>';
+    return html;
+  }
+
   function openUnit(u) {
     selectedUnit = u;
     const meta = DATA.flatTypes[u.type];
+    const block = DATA.blocks.find(b=>b.id===u.block);
+    const distributionSource = sourceMap.get(block.distributionSource);
+
     document.getElementById('unitCrumbBlock').textContent = `BLOCK ${u.block}`;
     document.getElementById('unitTitle').textContent = `#${floorNumber(u.floor)}-${u.stack}`;
     document.getElementById('unitBlock').textContent = `Block ${u.block}`;
@@ -203,34 +312,43 @@
     document.getElementById('unitStack').textContent = u.stack;
     document.getElementById('unitType').textContent = meta.label;
     document.getElementById('unitArea').textContent = `${meta.area} sqm total · ${meta.internalArea} sqm internal`;
-    document.getElementById('unitPrice').textContent = `${money(meta.price99[0])} – ${money(meta.price99[1])} (99-year indicative)`;
+    document.getElementById('unitPrice').textContent = `${money(meta.price99[0])} – ${money(meta.price99[1])} (HDB flat-type range)`;
     document.getElementById('floorplanTitle').textContent = meta.label;
+    document.getElementById('elevationTitle').textContent = `Block ${u.block} · #${floorNumber(u.floor)}-${u.stack}`;
+    document.getElementById('unitElevation').innerHTML = renderElevation(u);
     document.getElementById('floorplanCanvas').innerHTML = planSvg(u.type);
     document.getElementById('unitRooms').innerHTML = meta.rooms.map(r=>`<span>${r}</span>`).join('');
     document.getElementById('unitLayoutNote').textContent = meta.layoutNote;
     document.getElementById('unitPlanSource').href = meta.sourcePlanUrl;
+    document.getElementById('unitDistributionSource').href = distributionSource?.url || sourceMap.get('brochure')?.url || '#';
+    document.getElementById('unitAvailabilityCertainty').textContent = statusLabel(u.status);
+
     const pill = document.getElementById('unitStatusPill');
     pill.className = `status-pill ${u.status}`;
-    pill.textContent = u.status === 'reported' ? 'Reported taken' : u.status[0].toUpperCase()+u.status.slice(1);
+    pill.textContent = statusLabel(u.status);
     unitDialog.showModal();
   }
+
   document.getElementById('closeUnitBtn').addEventListener('click',()=>unitDialog.close());
   document.getElementById('focusFloorBtn').addEventListener('click', () => {
-    if (!selectedUnit || !window.__berlayarHighlightUnitFloor) return;
+    if (!selectedUnit || !window.__berlayarHighlightUnit) return;
     unitDialog.close();
-    window.__berlayarHighlightUnitFloor(selectedUnit);
+    window.__berlayarHighlightUnit(selectedUnit);
   });
 
   function openFeature(feature) {
     document.getElementById('featureTitle').textContent = feature.name;
     document.getElementById('featureDetail').textContent = feature.detail;
-    document.getElementById('featureBasis').textContent = feature.basis;
+    const confidence = feature.confidence === 'verified' ? 'Verified fact' : 'Cross-checked public source';
+    document.getElementById('featureBasis').textContent = `${confidence} · ${feature.geometry === 'schematic' ? 'schematic position' : 'source position'}`;
+    const links = (feature.sourceIds || []).map(id => sourceMap.get(id)).filter(Boolean);
+    document.getElementById('featureSourceLinks').innerHTML = links.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name} ↗</a>`).join('');
     featureDialog.showModal();
   }
   document.getElementById('closeFeatureBtn').addEventListener('click',()=>featureDialog.close());
 
   const sourcesList = document.getElementById('sourcesList');
-  sourcesList.innerHTML = DATA.sources.map(s => `<div class="source-item"><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a><p>${s.use}</p></div>`).join('');
+  sourcesList.innerHTML = DATA.sources.map(s => `<div class="source-item"><div class="source-tier ${s.tier}">${s.tier === 'primary' ? 'PRIMARY' : s.tier === 'mirror' ? 'PUBLIC MIRROR' : 'CROSS-CHECK'}</div><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a><p>${s.use}</p></div>`).join('');
   document.getElementById('sourcesBtn').addEventListener('click',()=>sourcesDialog.showModal());
   document.getElementById('closeSourcesBtn').addEventListener('click',()=>sourcesDialog.close());
 
@@ -248,13 +366,15 @@
     const amenityObjects = [];
     const linkObjects = [];
     const contextObjects = [];
+    const planLabelObjects = [];
     let activeType = 'all';
     let cameraTween = null;
     let floorHighlight = null;
+    let unitHighlight = null;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a1713);
-    scene.fog = new THREE.Fog(0x0a1713, 62, 112);
+    scene.fog = new THREE.Fog(0x0a1713, 64, 116);
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 220);
     camera.position.set(43, 48, 57);
@@ -270,16 +390,16 @@
     controls.enableDamping = true;
     controls.dampingFactor = .065;
     controls.minDistance = 19;
-    controls.maxDistance = 103;
-    controls.maxPolarAngle = Math.PI*.47;
+    controls.maxDistance = 110;
+    controls.maxPolarAngle = Math.PI*.49;
     controls.target.set(-1,3,1);
 
-    scene.add(new THREE.HemisphereLight(0xe5eee6,0x23352d,2.4));
-    const sun = new THREE.DirectionalLight(0xffefd0,3.1);
+    scene.add(new THREE.HemisphereLight(0xe5eee6,0x23352d,2.45));
+    const sun = new THREE.DirectionalLight(0xffefd0,3.0);
     sun.position.set(-27,48,-20);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048,2048);
-    sun.shadow.camera.left=-50; sun.shadow.camera.right=50; sun.shadow.camera.top=50; sun.shadow.camera.bottom=-50;
+    sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55; sun.shadow.camera.bottom=-55;
     scene.add(sun);
 
     const ground = new THREE.Mesh(
@@ -288,15 +408,19 @@
     );
     ground.position.set(-1,-.68,1.5); ground.receiveShadow=true; scene.add(ground);
 
-    // Reserved/context parcels outside the project boundary.
-    function addParcel(x,z,w,d,color,label) {
-      const g = new THREE.Group();
+    function addParcel(x,z,w,d,color,featureId=null) {
       const p = new THREE.Mesh(new THREE.BoxGeometry(w,.08,d), new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity:.72}));
-      p.position.y=.01; g.add(p); g.position.set(x,0,z); g.userData.label=label; scene.add(g); contextObjects.push(g); return g;
+      p.position.set(x,.01,z);
+      if (featureId) { p.userData={featureId,kind:'feature'}; featureMeshes.push(p); }
+      scene.add(p); contextObjects.push(p); return p;
     }
-    addParcel(31.8,8.0,10,26,0x5d665b,'Future residential');
-    addParcel(10.5,33.2,25,7,0x557157,'Future park');
-    addParcel(-24.5,31.5,15,7,0x5d665b,'Future residential');
+
+    addParcel(-25.0,-25.0,10,8,0x5f7e61,'futurepark-nw');
+    addParcel(9.5,32.0,18,6,0x5f7e61,'futurepark-south');
+    addParcel(-33.2,-3.0,6.5,30,0x6f766f,'publichousing-west');
+    addParcel(31.7,6.0,9,27,0x5d665b,'futurehousing-east');
+    addParcel(-24.0,32.8,14,7,0x5d665b,'futurehousing-sw');
+    addParcel(29.5,33.0,16,7,0x5d665b,'futurehousing-se');
 
     function addRoad(spec) {
       const road = new THREE.Mesh(new THREE.BoxGeometry(spec.w,.1,spec.d),new THREE.MeshStandardMaterial({color:0x313a37,roughness:1}));
@@ -304,23 +428,23 @@
     }
     DATA.roads.forEach(addRoad);
 
-    // Internal roads from the site-plan geometry, simplified for orientation.
+    // Internal road / path network. Geometry is deliberately schematic, based on source-plan connectivity.
     function addInternalRoad(x,z,w,d,rot=0) {
       const road = new THREE.Mesh(new THREE.BoxGeometry(w,.09,d),new THREE.MeshStandardMaterial({color:0x6b675c,roughness:1}));
       road.position.set(x,.07,z); road.rotation.y=rot; road.receiveShadow=true; scene.add(road); return road;
     }
-    addInternalRoad(6.8,7.2,5,35,.38);
-    addInternalRoad(-5,4.2,26,3.2,.03);
-    addInternalRoad(-10.0,16.0,24,3.1,.03);
-    addInternalRoad(12.6,-1.0,3.4,17,-.06);
+    addInternalRoad(6.8,7.0,5,35,.36);
+    addInternalRoad(-5.3,4.0,26,3.2,.03);
+    addInternalRoad(-10.0,15.7,24,3.1,.03);
+    addInternalRoad(12.7,-1.0,3.4,17,-.06);
 
     function addPath(x,z,w,d,rot=0) {
       const p = new THREE.Mesh(new THREE.BoxGeometry(w,.055,d),new THREE.MeshStandardMaterial({color:0xc1bbaa,roughness:1}));
       p.position.set(x,.105,z); p.rotation.y=rot; scene.add(p); return p;
     }
-    addPath(-4.0,-5.1,39,1.15,0);
-    addPath(-8.0,9.2,29,1.1,-.05);
-    addPath(0.5,18.3,31,1.1,.02);
+    addPath(-4.0,-5.3,39,1.15,0);
+    addPath(-8.0,9.0,29,1.1,-.05);
+    addPath(0.5,18.0,31,1.1,.02);
     addPath(16.5,-3.2,1.0,17,0);
 
     function addTree(x,z,s=1) {
@@ -330,8 +454,8 @@
       crown.position.set(x,1.02,z);
       scene.add(trunk,crown);
     }
-    for (let i=0;i<56;i++) {
-      const a=(i/56)*Math.PI*2;
+    for (let i=0;i<58;i++) {
+      const a=(i/58)*Math.PI*2;
       const rx=26+Math.sin(i*1.8)*2.7;
       const rz=25+Math.cos(i*2.3)*2.5;
       addTree(-1+Math.cos(a)*rx,2+Math.sin(a)*rz,.78+(i%5)*.06);
@@ -341,31 +465,49 @@
     function facadeTexture(block) {
       const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=512;
       const ctx=canvas.getContext('2d');
-      ctx.fillStyle='#e5e1d7'; ctx.fillRect(0,0,512,512);
+      ctx.fillStyle='#e6e2d8'; ctx.fillRect(0,0,512,512);
       ctx.fillStyle='#2f413b';
-      for(let row=0;row<18;row++) for(let col=0;col<block.stacks.length;col++) {
-        const x=24+col*(465/block.stacks.length); const y=18+row*26;
-        ctx.fillRect(x,y,Math.max(13,27-(block.stacks.length-6)*2),10);
+      for(let row=0;row<20;row++) for(let col=0;col<block.stacks.length;col++) {
+        const x=20+col*(472/block.stacks.length); const y=14+row*24;
+        ctx.fillRect(x,y,Math.max(13,27-(block.stacks.length-6)*2),9);
       }
-      ctx.fillStyle='#bdb7aa'; ctx.fillRect(0,486,512,26);
+      ctx.fillStyle='#beb8aa'; ctx.fillRect(0,487,512,25);
       const tex=new THREE.CanvasTexture(canvas); tex.colorSpace=THREE.SRGBColorSpace; return tex;
     }
 
+    const floorHeight = .39;
+
     function makeBuilding(block) {
       const g=new THREE.Group();
-      const h=block.storeys*.39;
+      const h=block.storeys*floorHeight;
       const mat=new THREE.MeshStandardMaterial({map:facadeTexture(block),color:0xffffff,roughness:.82});
-      const tower=new THREE.Mesh(new THREE.BoxGeometry(block.model.width,h,block.model.depth),mat);
-      tower.position.y=h/2; tower.castShadow=true; tower.receiveShadow=true; tower.userData.blockId=block.id; tower.userData.kind='block';
-      blockMeshes.push(tower); g.add(tower);
-      const podium=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.05,.75,block.model.depth*1.1),new THREE.MeshStandardMaterial({color:0xc7c2b5,roughness:1}));
+
+      // Schematic crossed-wing tower: richer than a single cuboid, but intentionally not sold as exact BIM geometry.
+      const mainWing=new THREE.Mesh(new THREE.BoxGeometry(block.model.width,h,block.model.depth),mat);
+      mainWing.position.y=h/2; mainWing.castShadow=true; mainWing.receiveShadow=true; mainWing.userData={blockId:block.id,kind:'block'};
+      blockMeshes.push(mainWing); g.add(mainWing);
+
+      const crossWing=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*.28,h*.94,block.model.depth*1.65),mat.clone());
+      crossWing.position.set(-block.model.width*.08,h*.47,0); crossWing.castShadow=true; crossWing.receiveShadow=true; crossWing.userData={blockId:block.id,kind:'block'};
+      blockMeshes.push(crossWing); g.add(crossWing);
+
+      const podium=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.07,.75,block.model.depth*1.14),new THREE.MeshStandardMaterial({color:0xc7c2b5,roughness:1}));
       podium.position.y=.38; podium.castShadow=true; g.add(podium);
-      // green terrace hint only where publicly shown in the project concept; deliberately abstract.
-      if(['201A','201B'].includes(block.id)) {
-        const roof=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*.46,.14,block.model.depth*.84),new THREE.MeshStandardMaterial({color:0x71956c,roughness:1}));
-        roof.position.set(block.model.width*.2,h+.1,0); g.add(roof);
+
+      // Exact non-residential terrace levels from the unit-distribution charts, rendered as visual bands.
+      for (const level of terraceLevels(block)) {
+        const y=(level-.5)*floorHeight;
+        const band=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.05,.16,block.model.depth*1.18),new THREE.MeshStandardMaterial({color:0x73926b,roughness:.9,emissive:0x162b1c,emissiveIntensity:.25}));
+        band.position.y=y; g.add(band);
       }
-      g.position.set(block.model.x,0,block.model.z); g.rotation.y=block.model.rotationY||0; scene.add(g); blockGroups.set(block.id,g);
+
+      if (block.roofGardenAtTop) {
+        const roof=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*.72,.16,block.model.depth*1.05),new THREE.MeshStandardMaterial({color:0x71956c,roughness:1}));
+        roof.position.set(block.model.width*.08,h+.1,0); g.add(roof);
+      }
+
+      g.position.set(block.model.x,0,block.model.z); g.rotation.y=block.model.rotationY||0;
+      scene.add(g); blockGroups.set(block.id,g);
     }
     DATA.blocks.forEach(makeBuilding);
 
@@ -379,58 +521,82 @@
     const mrtFeature=DATA.siteFeatures.find(f=>f.id==='mrt');
     const mrtGroup=new THREE.Group(); mrtGroup.position.set(mrtFeature.x,0,mrtFeature.z);
     const mrtBase=new THREE.Mesh(new THREE.BoxGeometry(12,1.5,3.4),new THREE.MeshStandardMaterial({color:0xb8b6ab,roughness:.8}));
-    mrtBase.position.y=.75; mrtBase.userData={featureId:'mrt',kind:'feature'}; featureMeshes.push(mrtBase); mrtGroup.add(mrtBase);
+    mrtBase.position.y=.75; addFeatureMesh(mrtFeature,mrtBase,'context'); mrtGroup.add(mrtBase);
     const mrtRoof=new THREE.Mesh(new THREE.BoxGeometry(12.6,.22,3.8),new THREE.MeshStandardMaterial({color:0xebe8dc,roughness:.8})); mrtRoof.position.y=1.62; mrtGroup.add(mrtRoof);
     const mrtLine=new THREE.Mesh(new THREE.BoxGeometry(11.3,.12,.18),new THREE.MeshStandardMaterial({color:0xf0a447})); mrtLine.position.set(0,1.2,1.73); mrtGroup.add(mrtLine);
     scene.add(mrtGroup); contextObjects.push(mrtGroup);
 
-    // Preschool: low 3-storey volume + green roof.
+    // Preschool: source-backed 3-storey use; dimensions are schematic.
     const pre=DATA.siteFeatures.find(f=>f.id==='preschool');
     const preGroup=new THREE.Group(); preGroup.position.set(pre.x,0,pre.z);
-    const preBody=new THREE.Mesh(new THREE.BoxGeometry(7.0,2.5,13.0),new THREE.MeshStandardMaterial({color:0xcabf9b,roughness:.9})); preBody.position.y=1.25; preBody.userData={featureId:'preschool',kind:'feature'}; featureMeshes.push(preBody); preGroup.add(preBody);
+    const preBody=new THREE.Mesh(new THREE.BoxGeometry(7.0,2.5,13.0),new THREE.MeshStandardMaterial({color:0xcabf9b,roughness:.9})); preBody.position.y=1.25; addFeatureMesh(pre,preBody); preGroup.add(preBody);
     const preRoof=new THREE.Mesh(new THREE.BoxGeometry(6.7,.18,12.7),new THREE.MeshStandardMaterial({color:0x71966c,roughness:1})); preRoof.position.y=2.58; preGroup.add(preRoof); scene.add(preGroup); amenityObjects.push(preGroup);
 
-    // MSCP: elliptical/ring mass with roof garden.
+    // Block 203 MSCP: source-backed 6-storey / roof-garden use; footprint simplified from site plan.
     const mscp=DATA.siteFeatures.find(f=>f.id==='mscp');
     const shape=new THREE.Shape(); shape.absellipse(0,0,6.6,4.7,0,Math.PI*2,false,0);
     const hole=new THREE.Path(); hole.absellipse(.5,0,2.5,1.65,0,Math.PI*2,false,0); shape.holes.push(hole);
     const mscpGeo=new THREE.ExtrudeGeometry(shape,{depth:3.2,bevelEnabled:false,curveSegments:36}); mscpGeo.rotateX(-Math.PI/2);
-    const mscpMesh=new THREE.Mesh(mscpGeo,new THREE.MeshStandardMaterial({color:0x817961,roughness:.9})); mscpMesh.position.set(mscp.x,0,mscp.z); mscpMesh.castShadow=true; mscpMesh.receiveShadow=true; mscpMesh.userData={featureId:'mscp',kind:'feature'}; featureMeshes.push(mscpMesh); scene.add(mscpMesh); amenityObjects.push(mscpMesh);
+    const mscpMesh=new THREE.Mesh(mscpGeo,new THREE.MeshStandardMaterial({color:0x817961,roughness:.9})); mscpMesh.position.set(mscp.x,0,mscp.z); mscpMesh.castShadow=true; mscpMesh.receiveShadow=true; addFeatureMesh(mscp,mscpMesh); scene.add(mscpMesh); amenityObjects.push(mscpMesh);
     const roofGarden=new THREE.Mesh(new THREE.RingGeometry(2.7,6.0,48),new THREE.MeshStandardMaterial({color:0x73926b,roughness:1,side:THREE.DoubleSide})); roofGarden.rotation.x=-Math.PI/2; roofGarden.scale.y=.75; roofGarden.position.set(mscp.x,3.23,mscp.z); scene.add(roofGarden); amenityObjects.push(roofGarden);
 
-    function canopy(x,z,w,d,y=3.55) {
+    function canopy(x,z,w,d,y=1.3,collection=amenityObjects) {
       const g=new THREE.Group();
       const roof=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d),new THREE.MeshStandardMaterial({color:0xd8d1b6,roughness:.75})); roof.position.y=y; g.add(roof);
       for(const sx of [-w*.38,w*.38]) for(const sz of [-d*.34,d*.34]) { const p=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,y,6),new THREE.MeshStandardMaterial({color:0x7d7667})); p.position.set(sx,y/2,sz); g.add(p); }
-      g.position.set(x,0,z); scene.add(g); amenityObjects.push(g); return g;
+      g.position.set(x,0,z); scene.add(g); collection.push(g); return g;
     }
-    // Confirmed roof-garden shelters, rendered schematically.
-    canopy(mscp.x-2.7,mscp.z-.5,1.8,1.2,3.75);
-    canopy(mscp.x+2.8,mscp.z+.6,1.8,1.2,3.75);
 
-    // Residents' network marker integrated into 201B ground floor.
+    const roofShelters=DATA.siteFeatures.find(f=>f.id==='roofshelters');
+    const c1=canopy(mscp.x-2.7,mscp.z-.5,1.8,1.2,3.75); c1.children[0].userData={featureId:roofShelters.id,kind:'feature'}; featureMeshes.push(c1.children[0]);
+    const c2=canopy(mscp.x+2.8,mscp.z+.6,1.8,1.2,3.75); c2.children[0].userData={featureId:roofShelters.id,kind:'feature'}; featureMeshes.push(c2.children[0]);
+
+    // RN centre marker integrated near 201B ground level.
     const rn=DATA.siteFeatures.find(f=>f.id==='rn');
-    const rnMesh=new THREE.Mesh(new THREE.BoxGeometry(3.2,.55,1.0),new THREE.MeshStandardMaterial({color:0x8bb9a3,emissive:0x183329,emissiveIntensity:.3})); rnMesh.position.set(rn.x,.45,rn.z); rnMesh.userData={featureId:'rn',kind:'feature'}; featureMeshes.push(rnMesh); scene.add(rnMesh); amenityObjects.push(rnMesh);
+    const rnMesh=new THREE.Mesh(new THREE.BoxGeometry(3.2,.55,1.0),new THREE.MeshStandardMaterial({color:0x8bb9a3,emissive:0x183329,emissiveIntensity:.3})); rnMesh.position.set(rn.x,.45,rn.z); addFeatureMesh(rn,rnMesh); scene.add(rnMesh); amenityObjects.push(rnMesh);
 
-    // Pavilion and recreation elements.
-    const pav=DATA.siteFeatures.find(f=>f.id==='pavilion'); canopy(pav.x,pav.z,4.2,3.0,1.25).children[0].userData={featureId:'pavilion',kind:'feature'}; featureMeshes.push(amenityObjects[amenityObjects.length-1].children[0]);
+    // Grouped communal-space marker. We do not assign an unsupported standalone-block use.
+    const community=DATA.siteFeatures.find(f=>f.id==='community-zone');
+    const communityCanopy=canopy(community.x,community.z,4.2,3.0,1.25); communityCanopy.children[0].userData={featureId:community.id,kind:'feature'}; featureMeshes.push(communityCanopy.children[0]);
+
     const play=DATA.siteFeatures.find(f=>f.id==='play');
-    const playPad=new THREE.Mesh(new THREE.CylinderGeometry(3.0,3.0,.08,32),new THREE.MeshStandardMaterial({color:0x9a8266,roughness:1})); playPad.position.set(play.x,.13,play.z); playPad.userData={featureId:'play',kind:'feature'}; featureMeshes.push(playPad); scene.add(playPad); amenityObjects.push(playPad);
+    const playPad=new THREE.Mesh(new THREE.CylinderGeometry(3.0,3.0,.08,32),new THREE.MeshStandardMaterial({color:0x9a8266,roughness:1})); playPad.position.set(play.x,.13,play.z); addFeatureMesh(play,playPad); scene.add(playPad); amenityObjects.push(playPad);
     [[-1.2,0,.35],[0,1,.45],[1.2,-.4,.3]].forEach(([dx,dz,s])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(s,12,8),new THREE.MeshStandardMaterial({color:0xd8c56d}));m.position.set(play.x+dx,.3+s,play.z+dz);scene.add(m);amenityObjects.push(m);});
 
     const fit=DATA.siteFeatures.find(f=>f.id==='fitness');
-    for(let i=0;i<4;i++){const bar=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.12),new THREE.MeshStandardMaterial({color:0x9fc0a7}));bar.position.set(fit.x+i*.65,.55,fit.z+(i%2)*.5);scene.add(bar);amenityObjects.push(bar);}    
-    const fitHit=new THREE.Mesh(new THREE.BoxGeometry(3,.3,2),new THREE.MeshBasicMaterial({transparent:true,opacity:0})); fitHit.position.set(fit.x,.3,fit.z); fitHit.userData={featureId:'fitness',kind:'feature'}; featureMeshes.push(fitHit); scene.add(fitHit); amenityObjects.push(fitHit);
+    for(let i=0;i<4;i++){const bar=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.12),new THREE.MeshStandardMaterial({color:0x9fc0a7}));bar.position.set(fit.x+i*.65,.55,fit.z+(i%2)*.5);scene.add(bar);amenityObjects.push(bar);}
+    const fitHit=new THREE.Mesh(new THREE.BoxGeometry(3,.3,2),new THREE.MeshBasicMaterial({transparent:true,opacity:0})); fitHit.position.set(fit.x,.3,fit.z); addFeatureMesh(fit,fitHit); scene.add(fitHit); amenityObjects.push(fitHit);
 
     const hc=DATA.siteFeatures.find(f=>f.id==='hardcourt');
-    const court=new THREE.Mesh(new THREE.BoxGeometry(5.7,.08,3.6),new THREE.MeshStandardMaterial({color:0x8f9c86,roughness:.9}));court.position.set(hc.x,.13,hc.z);court.userData={featureId:'hardcourt',kind:'feature'};featureMeshes.push(court);scene.add(court);amenityObjects.push(court);
+    const court=new THREE.Mesh(new THREE.BoxGeometry(5.7,.08,3.6),new THREE.MeshStandardMaterial({color:0x8f9c86,roughness:.9}));court.position.set(hc.x,.13,hc.z);addFeatureMesh(hc,court);scene.add(court);amenityObjects.push(court);
     for(const zoff of [-1.5,1.5]){const line=new THREE.Mesh(new THREE.BoxGeometry(5.2,.015,.05),new THREE.MeshBasicMaterial({color:0xd8dfd5}));line.position.set(hc.x,.18,hc.z+zoff);scene.add(line);amenityObjects.push(line);}
 
-    // Two simplified drop-off zones from the published project description/site plan.
-    function dropOff(x,z,rot=0){const ring=new THREE.Mesh(new THREE.RingGeometry(1.25,1.65,28),new THREE.MeshStandardMaterial({color:0xa6a294,roughness:1,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.rotation.z=rot;ring.position.set(x,.15,z);scene.add(ring);amenityObjects.push(ring);}    
+    // Two drop-off loops are described in public site-plan analysis. Placement remains schematic.
+    function dropOff(x,z){const ring=new THREE.Mesh(new THREE.RingGeometry(1.25,1.65,28),new THREE.MeshStandardMaterial({color:0xa6a294,roughness:1,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(x,.15,z);scene.add(ring);amenityObjects.push(ring);}
     dropOff(-13.2,-2.0); dropOff(8.1,1.9);
 
-    // Sheltered linkway network: simplified roof + walkway along confirmed connectivity paths.
+    // Future bus-stop markers: count is cross-checked; exact model placement is schematic.
+    for (const id of ['future-bus-west','future-bus-south-1','future-bus-south-2']) {
+      const f=DATA.siteFeatures.find(x=>x.id===id);
+      const g=canopy(f.x,f.z,1.5,.7,.75,contextObjects);
+      const hit=g.children[0]; hit.userData={featureId:f.id,kind:'feature'}; featureMeshes.push(hit);
+    }
+
+    // Published plan labels 200/202/204/205, with use intentionally not guessed.
+    const planOnlyFeatures = DATA.planOnlyBlockLabels.map(p => ({
+      id:`plan-block-${p.id}`,
+      category:'context',
+      name:`Block ${p.id} · source-plan label`,
+      short:`${p.id}`,
+      x:p.x,z:p.z,height:.8,confidence:'verified',geometry:'schematic',sourceIds:['brochure'],
+      detail:`The public Berlayar Rise site plan labels this standalone structure as Block ${p.id}. V1.3 intentionally does not assign it a use because that use has not been verified from the sources used for this build.`
+    }));
+    for (const f of planOnlyFeatures) {
+      const mesh=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.4,.65,20),new THREE.MeshStandardMaterial({color:0x7f725f,roughness:.95}));
+      mesh.position.set(f.x,.35,f.z); addFeatureMesh(f,mesh,'context'); scene.add(mesh); planLabelObjects.push(mesh);
+    }
+
+    // Sheltered linkway network: connectivity is source-backed; routes are a sketch.
     function addShelteredLink(from,to) {
       const [x1,z1]=from,[x2,z2]=to; const dx=x2-x1,dz=z2-z1; const len=Math.hypot(dx,dz); const angle=Math.atan2(dz,dx);
       const g=new THREE.Group(); g.position.set((x1+x2)/2,0,(z1+z2)/2); g.rotation.y=-angle;
@@ -442,25 +608,23 @@
     }
     DATA.shelteredLinks.forEach(l=>addShelteredLink(l.from,l.to));
 
-    // Surrounding water/harbour hint, far south only, not intended as literal shoreline.
-    const water=new THREE.Mesh(new THREE.PlaneGeometry(78,16),new THREE.MeshStandardMaterial({color:0x315969,roughness:.6,transparent:true,opacity:.62}));water.rotation.x=-Math.PI/2;water.position.set(0,-.03,43);scene.add(water);contextObjects.push(water);
-
     // Block labels.
     for(const block of DATA.blocks){
       const el=document.createElement('button'); el.type='button'; el.className='block-label';
       const c=statusCounts(blockUnits(block.id));
-      el.innerHTML=`<strong>Block ${block.id}</strong><span>${c.available.toLocaleString()} / ${block.total.toLocaleString()} available</span>`;
+      el.innerHTML=`<strong>Block ${block.id}</strong><span>${c.untracked.toLocaleString()} untracked · ${block.total.toLocaleString()} total</span>`;
       el.addEventListener('click',()=>openBlock(block)); sceneHost.appendChild(el); labels.set(block.id,el);
     }
 
-    const majorFeatureIds=new Set(['mrt','preschool','mscp','rn','pavilion','roofshelters','linkways','futurepark','futurehousing-east']);
-    for(const feature of DATA.siteFeatures){
-      if(!majorFeatureIds.has(feature.id)) continue;
+    const majorFeatureIds=new Set(['mrt','preschool','mscp','rn','community-zone','play','hardcourt','future-bus-west','future-bus-south-1','future-bus-south-2','futurepark-nw','futurepark-south','publichousing-west','futurehousing-east']);
+    const allLabelFeatures=[...DATA.siteFeatures,...planOnlyFeatures];
+    for(const feature of allLabelFeatures){
+      if(!majorFeatureIds.has(feature.id) && !feature.id.startsWith('plan-block-')) continue;
       const el=document.createElement('button'); el.type='button'; el.className=`feature-label ${feature.category}`; el.textContent=feature.short;
       el.addEventListener('click',()=>openFeature(feature)); sceneHost.appendChild(el); featureLabels.set(feature.id,el);
     }
 
-    // Road labels (orientation only).
+    // Road labels: names are source-backed; screen positions are illustrative.
     const roadLabels=[
       {text:'TELOK BLANGAH ROAD / WEST COAST HIGHWAY',x:0,z:-32.8},
       {text:'BERLAYAR STREET',x:-32.2,z:2},
@@ -474,42 +638,75 @@
 
     function screenPosition(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera);const r=sceneHost.getBoundingClientRect();return {x:(p.x*.5+.5)*r.width,y:(-p.y*.5+.5)*r.height,behind:p.z>1};}
     function updateLabels(){
-      for(const block of DATA.blocks){const p=screenPosition(block.model.x,block.storeys*.39+1.7,block.model.z);const el=labels.get(block.id);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
-      for(const feature of DATA.siteFeatures){const el=featureLabels.get(feature.id);if(!el)continue;const p=screenPosition(feature.x,(feature.height||.5)+1,feature.z);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
+      for(const block of DATA.blocks){const p=screenPosition(block.model.x,block.storeys*floorHeight+1.7,block.model.z);const el=labels.get(block.id);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
+      for(const feature of allLabelFeatures){const el=featureLabels.get(feature.id);if(!el)continue;const p=screenPosition(feature.x,(feature.height||.5)+1,feature.z);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       roadLabelEls.forEach(r=>{const p=screenPosition(r.x,.25,r.z);r.el.style.left=`${p.x}px`;r.el.style.top=`${p.y}px`;r.el.style.display=p.behind?'none':'';});
     }
 
     function animate(t){
       requestAnimationFrame(animate);
-      if(cameraTween){const p=Math.min(1,(t-cameraTween.start)/cameraTween.duration);const e=1-Math.pow(1-p,3);camera.position.lerpVectors(cameraTween.fromPos,cameraTween.toPos,e);controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,e);if(p>=1)cameraTween=null;}
+      if(cameraTween){
+        const p=Math.min(1,(t-cameraTween.start)/cameraTween.duration); const e=1-Math.pow(1-p,3);
+        camera.position.lerpVectors(cameraTween.fromPos,cameraTween.toPos,e);
+        controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,e);
+        if(p>=1)cameraTween=null;
+      }
       controls.update(); updateLabels(); renderer.render(scene,camera);
     }
     requestAnimationFrame(animate);
 
+    function flyTo(pos,target,duration=780){
+      cameraTween={start:performance.now(),duration,fromPos:camera.position.clone(),toPos:pos,fromTarget:controls.target.clone(),toTarget:target};
+    }
+
     function flyToBlock(block){
       const target=new THREE.Vector3(block.model.x,block.storeys*.14,block.model.z);
       const pos=new THREE.Vector3(block.model.x+15,block.storeys*.23+12,block.model.z+18);
-      cameraTween={start:performance.now(),duration:780,fromPos:camera.position.clone(),toPos:pos,fromTarget:controls.target.clone(),toTarget:target};
+      flyTo(pos,target,780);
     }
     window.__berlayarFlyToBlock=flyToBlock;
 
-    function resetView(){
+    function clearHighlights(){
       if(floorHighlight){floorHighlight.parent?.remove(floorHighlight);floorHighlight=null;}
-      cameraTween={start:performance.now(),duration:850,fromPos:camera.position.clone(),toPos:new THREE.Vector3(43,48,57),fromTarget:controls.target.clone(),toTarget:new THREE.Vector3(-1,3,1)};
+      if(unitHighlight){unitHighlight.parent?.remove(unitHighlight);unitHighlight=null;}
+    }
+
+    function resetView(){
+      clearHighlights();
+      flyTo(new THREE.Vector3(43,48,57),new THREE.Vector3(-1,3,1),850);
     }
     document.getElementById('resetViewBtn').addEventListener('click',resetView);
 
-    function highlightUnitFloor(u){
-      if(floorHighlight){floorHighlight.parent?.remove(floorHighlight);floorHighlight=null;}
+    document.getElementById('planViewBtn').addEventListener('click',()=>{
+      clearHighlights();
+      flyTo(new THREE.Vector3(-1,78,2),new THREE.Vector3(-1,0,2),850);
+    });
+
+    function highlightUnit(u){
+      clearHighlights();
       const block=DATA.blocks.find(b=>b.id===u.block); const group=blockGroups.get(u.block); if(!block||!group)return;
-      const y=(u.floor-.5)*.39;
-      floorHighlight=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.09,.20,block.model.depth*1.2),new THREE.MeshBasicMaterial({color:0xd8f09e,transparent:true,opacity:.65,wireframe:false}));
+      const y=(u.floor-.5)*floorHeight;
+
+      floorHighlight=new THREE.Mesh(
+        new THREE.BoxGeometry(block.model.width*1.09,.12,block.model.depth*1.18),
+        new THREE.MeshBasicMaterial({color:0xd8f09e,transparent:true,opacity:.30})
+      );
       floorHighlight.position.y=y; group.add(floorHighlight);
+
+      const stackIndex=block.stacks.findIndex(s=>s.no===u.stack);
+      const cellW=block.model.width/block.stacks.length;
+      const x=-block.model.width/2 + cellW*(stackIndex+.5);
+      unitHighlight=new THREE.Mesh(
+        new THREE.BoxGeometry(cellW*.78,floorHeight*.68,.12),
+        new THREE.MeshBasicMaterial({color:0xf2ff9c,transparent:true,opacity:.92})
+      );
+      unitHighlight.position.set(x,y,block.model.depth/2+.09); group.add(unitHighlight);
+
       const target=new THREE.Vector3(block.model.x,y,block.model.z);
-      const pos=new THREE.Vector3(block.model.x+11,y+7,block.model.z+13);
-      cameraTween={start:performance.now(),duration:720,fromPos:camera.position.clone(),toPos:pos,fromTarget:controls.target.clone(),toTarget:target};
+      const pos=new THREE.Vector3(block.model.x+10,y+5.8,block.model.z+13);
+      flyTo(pos,target,720);
     }
-    window.__berlayarHighlightUnitFloor=highlightUnitFloor;
+    window.__berlayarHighlightUnit=highlightUnit;
 
     // Raycast blocks and site features.
     const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2(); let down={x:0,y:0};
@@ -520,7 +717,10 @@
       const hits=raycaster.intersectObjects([...blockMeshes,...featureMeshes],false);if(!hits.length)return;
       const hit=hits[0].object;
       if(hit.userData.kind==='block'){const block=DATA.blocks.find(b=>b.id===hit.userData.blockId);if(block)openBlock(block);}
-      else if(hit.userData.kind==='feature'){const f=DATA.siteFeatures.find(f=>f.id===hit.userData.featureId);if(f)openFeature(f);}
+      else if(hit.userData.kind==='feature'){
+        const f=allLabelFeatures.find(x=>x.id===hit.userData.featureId) || DATA.siteFeatures.find(x=>x.id===hit.userData.featureId);
+        if(f)openFeature(f);
+      }
     });
 
     document.getElementById('typeFilters').addEventListener('click',e=>{
@@ -528,15 +728,21 @@
       document.querySelectorAll('#typeFilters .filter').forEach(b=>b.classList.toggle('active',b===btn));
       for(const block of DATA.blocks){
         const has=activeType==='all'||block.stacks.some(s=>s.type===activeType); const g=blockGroups.get(block.id);
-        g.traverse(obj=>{if(obj.isMesh&&obj!==floorHighlight){obj.material.transparent=!has;obj.material.opacity=has?1:.18;}});
+        g.traverse(obj=>{if(obj.isMesh&&obj!==floorHighlight&&obj!==unitHighlight){obj.material.transparent=!has;obj.material.opacity=has?1:.18;}});
         labels.get(block.id).classList.toggle('dimmed',!has);
       }
     });
 
     function setLayer(objects,visible){objects.forEach(o=>o.visible=visible);}
-    document.getElementById('layerAmenities').addEventListener('change',e=>{setLayer(amenityObjects,e.target.checked);for(const [id,el] of featureLabels){const f=DATA.siteFeatures.find(x=>x.id===id);if(f.category!=='context'&&f.category!=='transport')el.classList.toggle('layer-hidden',!e.target.checked);}});
+    document.getElementById('layerAmenities').addEventListener('change',e=>{
+      setLayer(amenityObjects,e.target.checked);
+      for(const [id,el] of featureLabels){const f=allLabelFeatures.find(x=>x.id===id);if(f && f.category!=='context'&&f.category!=='transport')el.classList.toggle('layer-hidden',!e.target.checked);}
+    });
     document.getElementById('layerLinks').addEventListener('change',e=>setLayer(linkObjects,e.target.checked));
-    document.getElementById('layerContext').addEventListener('change',e=>{setLayer(contextObjects,e.target.checked);for(const [id,el] of featureLabels){const f=DATA.siteFeatures.find(x=>x.id===id);if(f.category==='context'||f.category==='transport')el.classList.toggle('layer-hidden',!e.target.checked);}});
+    document.getElementById('layerContext').addEventListener('change',e=>{
+      setLayer(contextObjects,e.target.checked);
+      for(const [id,el] of featureLabels){const f=allLabelFeatures.find(x=>x.id===id);if(f && (f.category==='context'||f.category==='transport'))el.classList.toggle('layer-hidden',!e.target.checked);}
+    });
 
   } catch(error) {
     console.error('Berlayar 3D viewer failed to initialise:',error);
@@ -551,11 +757,13 @@
         <button class="fallback-block b201b" data-block="201B">201B</button>
         <button class="fallback-block b204a" data-block="204A">204A</button>
         <button class="fallback-block b204b" data-block="204B">204B</button>
-        <button class="fallback-feature preschool" data-feature="preschool">Preschool</button>
+        <button class="fallback-feature preschool" data-feature="preschool">3-storey preschool</button>
         <button class="fallback-feature mscp" data-feature="mscp">203 MSCP + roof garden</button>
-        <div class="fallback-warning"><strong>3D library could not load.</strong><span>This 2D fallback remains interactive. Connect to the internet and refresh for the 3D model.</span></div>
+        <div class="fallback-warning"><strong>3D library could not load.</strong><span>The source-derived block/unit tracker still works from this 2D fallback. Internet access is required for the remote Three.js module.</span></div>
       </div>`;
     sceneHost.querySelectorAll('[data-block]').forEach(el=>el.addEventListener('click',()=>{const b=DATA.blocks.find(x=>x.id===el.dataset.block);if(b)openBlock(b);}));
     sceneHost.querySelectorAll('[data-feature]').forEach(el=>el.addEventListener('click',()=>{const f=DATA.siteFeatures.find(x=>x.id===el.dataset.feature);if(f)openFeature(f);}));
+    document.getElementById('planViewBtn').disabled = true;
+    document.getElementById('resetViewBtn').disabled = true;
   }
 })();
