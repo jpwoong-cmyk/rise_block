@@ -150,6 +150,269 @@
   const quickTakenBtn = document.getElementById('quickTakenBtn');
   const quickAvailableBtn = document.getElementById('quickAvailableBtn');
   const quickDetailsBtn = document.getElementById('quickDetailsBtn');
+  const quickFavouriteBtn = document.getElementById('quickFavouriteBtn');
+  const unitFavouriteBtn = document.getElementById('unitFavouriteBtn');
+
+  // ---------- Private favourites: browser-local only ----------
+  const favouritesStorageKey = 'berlayar_rise_favourites_v1';
+  const favouriteStatusStorageKey = 'berlayar_rise_favourite_status_v1';
+  const favouritesPanel = document.getElementById('favouritesPanel');
+  const favouritesBackdrop = document.getElementById('favouritesBackdrop');
+  const favouritesBtn = document.getElementById('favouritesBtn');
+  const favouritesCount = document.getElementById('favouritesCount');
+  const favouritesAlertDot = document.getElementById('favouritesAlertDot');
+  const favouritesList = document.getElementById('favouritesList');
+  const favouritesStatusNote = document.getElementById('favouritesStatusNote');
+  const favouriteToast = document.getElementById('favouriteToast');
+  const favouriteToastText = document.getElementById('favouriteToastText');
+  const importFavouritesInput = document.getElementById('importFavouritesInput');
+
+  let storageAvailable = true;
+  let favouriteKeys = new Set();
+  let favouriteLastStatus = {};
+  let newlyTakenFavouriteKeys = new Set();
+
+  function readLocalJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      storageAvailable = false;
+      console.warn('Local favourites storage unavailable:', err);
+      return fallback;
+    }
+  }
+
+  function writeLocalJson(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (err) {
+      storageAvailable = false;
+      console.warn('Could not save favourites locally:', err);
+      return false;
+    }
+  }
+
+  const savedFavouriteKeys = readLocalJson(favouritesStorageKey, []);
+  favouriteKeys = new Set(Array.isArray(savedFavouriteKeys) ? savedFavouriteKeys.map(String) : []);
+  favouriteLastStatus = readLocalJson(favouriteStatusStorageKey, {}) || {};
+
+  function favouriteKey(u) {
+    return `${u.block}|${floorNumber(u.floor)}-${u.stack}`;
+  }
+
+  function unitByFavouriteKey(key) {
+    const splitAt = String(key).indexOf('|');
+    if (splitAt < 0) return null;
+    const block = String(key).slice(0, splitAt);
+    const unitNo = String(key).slice(splitAt + 1);
+    return units.find(u => u.block === block && `${floorNumber(u.floor)}-${u.stack}` === unitNo) || null;
+  }
+
+  function isFavourite(u) {
+    return !!u && favouriteKeys.has(favouriteKey(u));
+  }
+
+  function isTakenLike(status) {
+    return status === 'reported_taken' || status === 'confirmed_taken';
+  }
+
+  function persistFavourites() {
+    writeLocalJson(favouritesStorageKey, [...favouriteKeys]);
+    writeLocalJson(favouriteStatusStorageKey, favouriteLastStatus);
+  }
+
+  function updateFavouriteButtons() {
+    const active = isFavourite(selectedUnit);
+    [quickFavouriteBtn, unitFavouriteBtn].forEach(btn => {
+      if (!btn) return;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+      btn.setAttribute('aria-label', active ? 'Remove flat from favourites' : 'Add flat to favourites');
+      const icon = btn.querySelector('span');
+      if (icon) icon.textContent = active ? '♥' : '♡';
+    });
+  }
+
+  function updateFavouritesTrigger() {
+    if (!favouritesBtn) return;
+    favouritesCount.textContent = favouriteKeys.size.toLocaleString();
+    favouritesBtn.classList.toggle('has-favourites', favouriteKeys.size > 0);
+    favouritesAlertDot.hidden = newlyTakenFavouriteKeys.size === 0;
+  }
+
+  function renderFavouritesPanel() {
+    updateFavouritesTrigger();
+
+    if (!storageAvailable) {
+      favouritesStatusNote.className = 'favourites-status-note warning';
+      favouritesStatusNote.textContent = 'This browser is blocking local storage. Favourites will not persist after this page closes.';
+    } else if (newlyTakenFavouriteKeys.size) {
+      favouritesStatusNote.className = 'favourites-status-note alert';
+      favouritesStatusNote.textContent = `${newlyTakenFavouriteKeys.size} favourite ${newlyTakenFavouriteKeys.size === 1 ? 'has' : 'have'} changed to taken since your last check.`;
+    } else {
+      favouritesStatusNote.className = 'favourites-status-note';
+      favouritesStatusNote.textContent = 'Your shortlist stays on this device unless you export a backup.';
+    }
+
+    const favourites = [...favouriteKeys]
+      .map(unitByFavouriteKey)
+      .filter(Boolean)
+      .sort((a,b) => a.block.localeCompare(b.block) || b.floor - a.floor || Number(a.stack) - Number(b.stack));
+
+    if (!favourites.length) {
+      favouritesList.innerHTML = `<div class="favourites-empty"><span aria-hidden="true">♡</span><strong>No favourites yet</strong><p>Select a flat and tap the heart to keep it here.</p></div>`;
+      return;
+    }
+
+    favouritesList.innerHTML = favourites.map(u => {
+      const key = favouriteKey(u);
+      const changed = newlyTakenFavouriteKeys.has(key);
+      const price = Number.isFinite(u.listedPrice) ? money(u.listedPrice) : '';
+      const stateClass = isTakenLike(u.status) ? 'taken' : (u.status === 'conflicting' ? 'conflicting' : 'available');
+      return `<article class="favourite-card ${stateClass}${changed ? ' changed' : ''}">
+        <button class="favourite-card-main" type="button" data-favourite-view="${key}">
+          <span class="favourite-card-title"><strong>#${floorNumber(u.floor)}-${u.stack}</strong><small>Block ${u.block}</small></span>
+          <span class="favourite-card-status">${statusLabel(u.status)}</span>
+          <span class="favourite-card-meta">${typeLabel(u.type)}${price ? ` · ${price}` : ''}</span>
+        </button>
+        <button class="favourite-remove" type="button" data-favourite-remove="${key}" aria-label="Remove #${floorNumber(u.floor)}-${u.stack} from favourites">♥</button>
+      </article>`;
+    }).join('');
+  }
+
+  function toggleFavourite(u = selectedUnit) {
+    if (!u) return;
+    const key = favouriteKey(u);
+    if (favouriteKeys.has(key)) {
+      favouriteKeys.delete(key);
+      delete favouriteLastStatus[key];
+      newlyTakenFavouriteKeys.delete(key);
+    } else {
+      favouriteKeys.add(key);
+      favouriteLastStatus[key] = u.status;
+    }
+    persistFavourites();
+    updateFavouriteButtons();
+    renderFavouritesPanel();
+    if (selectedBlock) renderUnitGrid();
+  }
+
+  function reconcileFavouriteStatuses({ notify = true } = {}) {
+    let newlyTaken = 0;
+    for (const key of [...favouriteKeys]) {
+      const u = unitByFavouriteKey(key);
+      if (!u) continue;
+      const previous = favouriteLastStatus[key];
+      if (previous && !isTakenLike(previous) && isTakenLike(u.status)) {
+        newlyTakenFavouriteKeys.add(key);
+        newlyTaken += 1;
+      }
+      favouriteLastStatus[key] = u.status;
+    }
+    persistFavourites();
+    renderFavouritesPanel();
+    if (notify && newlyTaken > 0) {
+      favouriteToastText.textContent = `${newlyTaken} favourite ${newlyTaken === 1 ? 'is' : 'are'} now marked taken.`;
+      favouriteToast.hidden = false;
+    }
+  }
+
+  function openFavouritesPanel() {
+    if (typeof setFlatTypeMenu === 'function') setFlatTypeMenu(false);
+    renderFavouritesPanel();
+    favouritesBackdrop.hidden = false;
+    favouritesPanel.classList.add('open');
+    favouritesPanel.setAttribute('aria-hidden', 'false');
+    favouriteToast.hidden = true;
+    // Seen now: clear the alert badge, but keep current statuses as the new baseline.
+    newlyTakenFavouriteKeys.clear();
+    updateFavouritesTrigger();
+  }
+
+  function closeFavouritesPanel() {
+    favouritesPanel.classList.remove('open');
+    favouritesPanel.setAttribute('aria-hidden', 'true');
+    favouritesBackdrop.hidden = true;
+  }
+
+  function exportFavourites() {
+    const payload = {
+      app: 'Berlayar Rise Tracker',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      favourites: [...favouriteKeys]
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `berlayar-rise-favourites-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importFavouritesFile(file) {
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      const raw = Array.isArray(payload) ? payload : payload?.favourites;
+      if (!Array.isArray(raw)) throw new Error('This file does not contain a favourites list.');
+      const valid = raw.map(String).filter(key => unitByFavouriteKey(key));
+      if (raw.length && !valid.length) throw new Error('No Berlayar Rise flats in this backup could be matched.');
+      valid.forEach(key => {
+        favouriteKeys.add(key);
+        const u = unitByFavouriteKey(key);
+        if (u && !favouriteLastStatus[key]) favouriteLastStatus[key] = u.status;
+      });
+      persistFavourites();
+      updateFavouriteButtons();
+      renderFavouritesPanel();
+      if (selectedBlock) renderUnitGrid();
+      favouritesStatusNote.className = 'favourites-status-note success';
+      favouritesStatusNote.textContent = `${valid.length} favourite ${valid.length === 1 ? 'was' : 'were'} imported. Existing favourites were kept.`;
+    } catch (err) {
+      favouritesStatusNote.className = 'favourites-status-note warning';
+      favouritesStatusNote.textContent = err?.message || 'Could not import this backup.';
+    } finally {
+      importFavouritesInput.value = '';
+    }
+  }
+
+  favouritesBtn.addEventListener('click', openFavouritesPanel);
+  document.getElementById('closeFavouritesBtn').addEventListener('click', closeFavouritesPanel);
+  favouritesBackdrop.addEventListener('click', closeFavouritesPanel);
+  document.getElementById('viewFavouriteChangesBtn').addEventListener('click', openFavouritesPanel);
+  document.getElementById('exportFavouritesBtn').addEventListener('click', exportFavourites);
+  document.getElementById('importFavouritesBtn').addEventListener('click', () => importFavouritesInput.click());
+  importFavouritesInput.addEventListener('change', () => importFavouritesFile(importFavouritesInput.files?.[0]));
+  quickFavouriteBtn.addEventListener('click', () => toggleFavourite());
+  unitFavouriteBtn.addEventListener('click', () => toggleFavourite());
+
+  favouritesList.addEventListener('click', e => {
+    const remove = e.target.closest('[data-favourite-remove]');
+    if (remove) {
+      const u = unitByFavouriteKey(remove.dataset.favouriteRemove);
+      if (u) toggleFavourite(u);
+      return;
+    }
+    const view = e.target.closest('[data-favourite-view]');
+    if (view) {
+      const u = unitByFavouriteKey(view.dataset.favouriteView);
+      if (!u) return;
+      const block = DATA.blocks.find(b => b.id === u.block);
+      closeFavouritesPanel();
+      if (block) openBlock(block);
+      selectUnitForQuickAction(u);
+      openUnit(u);
+    }
+  });
+
+  updateFavouritesTrigger();
+  renderFavouritesPanel();
 
   // ---------- Primary flat-type selector ----------
   let activeType = 'all';
@@ -302,6 +565,7 @@
       renderUnitGrid();
     }
     if (selectedUnit && unitDialog.open) updateUnitStatusUi(selectedUnit);
+    reconcileFavouriteStatuses({ notify: true });
   }
 
   function updateUnitStatusUi(u) {
@@ -311,6 +575,7 @@
       pill.textContent = statusLabel(u.status);
     }
     updateQuickUnitBar();
+    updateFavouriteButtons();
   }
 
   function renderQuotaForSelectedBlock() {
@@ -725,12 +990,13 @@
       btn.type = 'button';
       btn.className = `level-unit-card ${u.status}`;
       if (selectedUnit?.id === u.id) btn.classList.add('selected-unit');
+      if (isFavourite(u)) btn.classList.add('favourite');
 
       const listedPrice = Number.isFinite(u.listedPrice) ? money(u.listedPrice) : '';
       btn.innerHTML = `
         <span class="level-unit-card-top">
           <strong>#${floorNumber(u.floor)}-${u.stack}</strong>
-          <span class="level-unit-status">${statusLabel(u.status)}</span>
+          <span class="level-unit-card-signals">${isFavourite(u) ? '<span class="level-unit-heart" aria-label="Favourite">♥</span>' : ''}<span class="level-unit-status">${statusLabel(u.status)}</span></span>
         </span>
         <span class="level-unit-type">${typeLabel(u.type)}</span>
         ${listedPrice ? `<span class="level-unit-price">${listedPrice}</span>` : ''}
@@ -801,6 +1067,7 @@
         btn.type = 'button';
         btn.className = `unit-cell ${u.status}`;
         if (selectedUnit?.id === u.id) btn.classList.add('selected-unit');
+        if (isFavourite(u)) btn.classList.add('favourite');
         btn.textContent = `#${floorNumber(level)}-${stack.no}`;
         btn.title = `${typeLabel(u.type)} · ${statusLabel(u.status)}`;
         if (typeFilter !== 'all' && u.type !== typeFilter) btn.classList.add('hidden-type');
@@ -821,6 +1088,7 @@
     quickUnitBar.hidden = false;
     quickUnitTitle.textContent = `#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`;
     quickUnitMeta.textContent = `${typeLabel(selectedUnit.type)} · ${statusLabel(selectedUnit.status)}`;
+    updateFavouriteButtons();
   }
 
   function selectUnitForQuickAction(u) {

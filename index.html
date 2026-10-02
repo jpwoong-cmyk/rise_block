@@ -32,7 +32,7 @@
         <span class="favourites-heart" aria-hidden="true">♥</span>
         <span class="favourites-label">Favourites</span>
         <span id="favouritesCount" class="favourites-count">0</span>
-        <span id="favouritesAlertDot" class="favourites-alert-dot" hidden aria-label="Favourite status changed"></span>
+        <span id="favouritesAlertDot" class="favourites-alert-dot" hidden></span>
       </button>
       <button id="communityReportBtn" class="ghost-btn primary" type="button">Report update</button>
       <button id="sourcesBtn" class="ghost-btn" type="button">Sources</button>
@@ -241,9 +241,7 @@
         <small id="quickUnitFeedback"></small>
       </div>
       <div class="quick-unit-actions">
-        <button id="quickFavouriteBtn" class="quick-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites">
-          <span aria-hidden="true">♡</span>
-        </button>
+        <button id="quickFavouriteBtn" class="quick-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites"><span aria-hidden="true">♡</span></button>
         <button id="quickTakenBtn" class="quick-status-btn taken" type="button">Taken</button>
         <button id="quickAvailableBtn" class="quick-status-btn available" type="button">Available</button>
         <button id="quickDetailsBtn" class="quick-status-btn details" type="button">Details</button>
@@ -258,9 +256,7 @@
         <div class="unit-context" id="unitCrumbBlock">Block</div>
         <div class="unit-title-row">
           <h2 id="unitTitle">#12-105</h2>
-          <button id="unitFavouriteBtn" class="unit-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites">
-            <span aria-hidden="true">♡</span>
-          </button>
+          <button id="unitFavouriteBtn" class="unit-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites"><span aria-hidden="true">♡</span></button>
         </div>
         <div id="unitStatusPill" class="status-pill available">Available</div>
 
@@ -331,14 +327,12 @@
       </div>
       <button id="closeFavouritesBtn" class="icon-btn" type="button" aria-label="Close favourites">×</button>
     </div>
-
     <div id="favouritesStatusNote" class="favourites-status-note"></div>
     <div id="favouritesList" class="favourites-list"></div>
-
     <div class="favourites-panel-foot">
       <div class="favourites-backup-copy">
         <strong>Keep a backup</strong>
-        <span>Export a small JSON file if you want to move your shortlist to another browser or device.</span>
+        <span>Export a JSON backup if you want to move your shortlist to another browser or device.</span>
       </div>
       <div class="favourites-backup-actions">
         <button id="exportFavouritesBtn" class="favourite-secondary-btn" type="button">Export backup</button>
@@ -348,11 +342,10 @@
     </div>
   </aside>
   <div id="favouritesBackdrop" class="favourites-backdrop" hidden></div>
-
   <div id="favouriteToast" class="favourite-toast" hidden role="status" aria-live="polite">
     <div>
       <span class="favourite-toast-heart" aria-hidden="true">♥</span>
-      <p><strong id="favouriteToastTitle">Favourite update</strong><span id="favouriteToastText"></span></p>
+      <p><strong>Favourite update</strong><span id="favouriteToastText"></span></p>
     </div>
     <button id="viewFavouriteChangesBtn" type="button">View</button>
   </div>
