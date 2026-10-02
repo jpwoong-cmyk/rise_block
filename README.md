@@ -118,3 +118,8 @@ Personal watchlists can still use localStorage later because they are device-spe
 - `data/berlayar-data.js` — public-source project schema
 - `vercel.json` — static Vercel configuration
 
+
+
+## V1.1 viewer fix
+
+The 3D viewer now loads Three.js and OrbitControls through browser-safe dynamic ESM imports. `app.js` is a normal script rather than a local ES module, so opening `index.html` directly no longer fails simply because it was loaded from `file://`. A visible loading/error state is also shown instead of a blank scene if the remote Three.js dependency cannot load.

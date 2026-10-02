@@ -1,8 +1,15 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/controls/OrbitControls.js';
+(async function initialiseBerlayarTracker() {
+  const sceneHost = document.getElementById('scene');
+  const loadingEl = document.getElementById('sceneLoading');
+
+  try {
+    const THREE = await import('https://esm.sh/three@0.161.0');
+    const { OrbitControls } = await import('https://esm.sh/three@0.161.0/examples/jsm/controls/OrbitControls.js');
+
+    if (loadingEl) loadingEl.remove();
+
 
 const DATA = window.BERLAYAR_DATA;
-const sceneHost = document.getElementById('scene');
 const blockDrawer = document.getElementById('blockDrawer');
 const unitDialog = document.getElementById('unitDialog');
 const sourcesDialog = document.getElementById('sourcesDialog');
@@ -384,3 +391,14 @@ const sourcesList = document.getElementById('sourcesList');
 sourcesList.innerHTML = DATA.sources.map(s => `<div class="source-item"><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a><p>${s.use}</p></div>`).join('');
 document.getElementById('sourcesBtn').addEventListener('click',()=>sourcesDialog.showModal());
 document.getElementById('closeSourcesBtn').addEventListener('click',()=>sourcesDialog.close());
+  } catch (error) {
+    console.error('Berlayar 3D viewer failed to initialise:', error);
+    if (loadingEl) {
+      loadingEl.classList.add('error');
+      loadingEl.innerHTML = `
+        <strong>3D viewer could not load.</strong>
+        <span>The page itself is working, but the Three.js viewer did not initialise. Check your internet connection, then refresh.</span>
+      `;
+    }
+  }
+})();
