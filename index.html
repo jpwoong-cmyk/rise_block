@@ -28,6 +28,12 @@
         <strong id="flatTypeBtnValue">All flats</strong>
         <i aria-hidden="true">⌄</i>
       </button>
+      <button id="favouritesBtn" class="ghost-btn favourites-trigger" type="button" aria-controls="favouritesPanel">
+        <span class="favourites-heart" aria-hidden="true">♥</span>
+        <span class="favourites-label">Favourites</span>
+        <span id="favouritesCount" class="favourites-count">0</span>
+        <span id="favouritesAlertDot" class="favourites-alert-dot" hidden aria-label="Favourite status changed"></span>
+      </button>
       <button id="communityReportBtn" class="ghost-btn primary" type="button">Report update</button>
       <button id="sourcesBtn" class="ghost-btn" type="button">Sources</button>
     </div>
@@ -235,6 +241,9 @@
         <small id="quickUnitFeedback"></small>
       </div>
       <div class="quick-unit-actions">
+        <button id="quickFavouriteBtn" class="quick-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites">
+          <span aria-hidden="true">♡</span>
+        </button>
         <button id="quickTakenBtn" class="quick-status-btn taken" type="button">Taken</button>
         <button id="quickAvailableBtn" class="quick-status-btn available" type="button">Available</button>
         <button id="quickDetailsBtn" class="quick-status-btn details" type="button">Details</button>
@@ -247,7 +256,12 @@
     <div class="unit-dialog-grid">
       <section class="unit-copy">
         <div class="unit-context" id="unitCrumbBlock">Block</div>
-        <h2 id="unitTitle">#12-105</h2>
+        <div class="unit-title-row">
+          <h2 id="unitTitle">#12-105</h2>
+          <button id="unitFavouriteBtn" class="unit-favourite-btn" type="button" aria-pressed="false" aria-label="Add flat to favourites">
+            <span aria-hidden="true">♡</span>
+          </button>
+        </div>
         <div id="unitStatusPill" class="status-pill available">Available</div>
 
         <dl class="unit-details">
@@ -306,6 +320,42 @@
       </section>
     </div>
   </dialog>
+
+
+  <aside id="favouritesPanel" class="favourites-panel" aria-hidden="true">
+    <div class="favourites-panel-head">
+      <div>
+        <div class="eyebrow">PRIVATE ON THIS DEVICE</div>
+        <h2>My favourites</h2>
+        <p>Saved only in this browser. Your shortlist is not sent to Supabase.</p>
+      </div>
+      <button id="closeFavouritesBtn" class="icon-btn" type="button" aria-label="Close favourites">×</button>
+    </div>
+
+    <div id="favouritesStatusNote" class="favourites-status-note"></div>
+    <div id="favouritesList" class="favourites-list"></div>
+
+    <div class="favourites-panel-foot">
+      <div class="favourites-backup-copy">
+        <strong>Keep a backup</strong>
+        <span>Export a small JSON file if you want to move your shortlist to another browser or device.</span>
+      </div>
+      <div class="favourites-backup-actions">
+        <button id="exportFavouritesBtn" class="favourite-secondary-btn" type="button">Export backup</button>
+        <button id="importFavouritesBtn" class="favourite-secondary-btn" type="button">Import backup</button>
+        <input id="importFavouritesInput" type="file" accept="application/json,.json" hidden />
+      </div>
+    </div>
+  </aside>
+  <div id="favouritesBackdrop" class="favourites-backdrop" hidden></div>
+
+  <div id="favouriteToast" class="favourite-toast" hidden role="status" aria-live="polite">
+    <div>
+      <span class="favourite-toast-heart" aria-hidden="true">♥</span>
+      <p><strong id="favouriteToastTitle">Favourite update</strong><span id="favouriteToastText"></span></p>
+    </div>
+    <button id="viewFavouriteChangesBtn" type="button">View</button>
+  </div>
 
   <aside id="communityPanel" class="community-panel" aria-hidden="true">
     <div class="community-panel-head">

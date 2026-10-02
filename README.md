@@ -230,3 +230,12 @@ It is not strong identity verification. A determined person can still reset a br
 - Fixes an older mobile CSS rule that accidentally hid every span inside the new V1.8 label component.
 - Mobile labels intentionally show only the block number (200A, 200B, etc.) plus the anchor pin to prevent overlap.
 - Desktop keeps the richer availability / flat-type detail.
+
+## V1.9 private favourites
+- Favourites are stored only in the current browser via localStorage. No account, email, phone number, or Supabase favourites table is used.
+- Select a unit and tap the heart to add/remove it from the shortlist.
+- Favourite units get a small heart marker in All Floors / By Level.
+- A new Favourites button in the top bar opens the private shortlist.
+- On each visit, live community unit status is compared locally against the last status seen for favourites. If a favourite changes to taken, an in-app alert is shown.
+- Export / Import creates a small JSON backup for moving favourites between browsers/devices.
+- Taken is now red; Reported taken uses a softer red.
