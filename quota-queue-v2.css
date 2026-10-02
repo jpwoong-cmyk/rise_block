@@ -356,8 +356,8 @@
   }
 
   .block-label.over-project-card {
-    opacity: .7;
-    filter: blur(1px);
+    opacity: .9;
+    filter: blur(0.5px);
     pointer-events: none;
   }
 }
