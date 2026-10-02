@@ -487,6 +487,19 @@
   }
 
 
+  function syncMobileSceneOverlays() {
+    const card = document.querySelector('.project-card');
+    const layers = document.querySelector('.layers');
+    if (!card || !layers) return;
+
+    if (window.matchMedia('(max-width: 660px)').matches) {
+      const cardBottom = card.offsetTop + card.offsetHeight;
+      layers.style.top = `${cardBottom + 12}px`;
+    } else {
+      layers.style.removeProperty('top');
+    }
+  }
+
   function injectActivityUi() {
     if ($('projectLastUpdate')) return;
 
@@ -534,6 +547,16 @@
     dialog.addEventListener('click', event => {
       if (event.target === dialog) dialog.close();
     });
+
+    syncMobileSceneOverlays();
+    window.addEventListener('resize', syncMobileSceneOverlays);
+
+    if ('ResizeObserver' in window) {
+      const cardResizeObserver = new ResizeObserver(syncMobileSceneOverlays);
+      cardResizeObserver.observe(card);
+    } else {
+      window.setTimeout(syncMobileSceneOverlays, 250);
+    }
   }
 
   function activityMinuteKey(value) {

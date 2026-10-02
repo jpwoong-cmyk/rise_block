@@ -312,3 +312,24 @@
     font-size: 9px;
   }
 }
+
+
+/* Mobile scene overlay fix:
+   keep 3D block labels behind the project card and move Map Layers below it. */
+.project-card {
+  z-index: 6;
+}
+
+.layers {
+  z-index: 6;
+}
+
+@media (max-width: 660px) {
+  .project-card {
+    z-index: 6;
+  }
+
+  .layers {
+    z-index: 6;
+  }
+}
