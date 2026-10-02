@@ -131,6 +131,17 @@
   const sourcesDialog = document.getElementById('sourcesDialog');
   let selectedBlock = null;
   let selectedUnit = null;
+  let selectedFloor = null;
+  let selectorView = 'level';
+
+  const levelViewBtn = document.getElementById('levelViewBtn');
+  const allFloorsViewBtn = document.getElementById('allFloorsViewBtn');
+  const levelSelectorView = document.getElementById('levelSelectorView');
+  const allFloorsPanel = document.getElementById('allFloorsPanel');
+  const levelRail = document.getElementById('levelRail');
+  const levelUnitGrid = document.getElementById('levelUnitGrid');
+  const currentLevelLabel = document.getElementById('currentLevelLabel');
+  const currentLevelMeta = document.getElementById('currentLevelMeta');
 
   const quickUnitBar = document.getElementById('quickUnitBar');
   const quickUnitTitle = document.getElementById('quickUnitTitle');
@@ -510,6 +521,9 @@
   function openBlock(block) {
     selectedBlock = block;
     selectedUnit = null;
+    const floors = residentialFloors(block);
+    selectedFloor = floors.length ? floors[floors.length - 1] : null;
+    setSelectorView('level');
     quickUnitBar.hidden = true;
     quickUnitFeedback.textContent = '';
     if (window.__berlayarFlyToBlock) window.__berlayarFlyToBlock(block);
@@ -548,6 +562,110 @@
   quotaToggleBtn.addEventListener('click', () => setQuotaCollapsed(!quotaCard.classList.contains('collapsed')));
   setQuotaCollapsed(window.matchMedia('(max-width: 760px)').matches);
 
+  function setSelectorView(view) {
+    selectorView = view === 'all' ? 'all' : 'level';
+    if (!levelViewBtn || !allFloorsViewBtn || !levelSelectorView || !allFloorsPanel) return;
+    const levelMode = selectorView === 'level';
+    levelViewBtn.classList.toggle('active', levelMode);
+    allFloorsViewBtn.classList.toggle('active', !levelMode);
+    levelSelectorView.hidden = !levelMode;
+    allFloorsPanel.hidden = levelMode;
+  }
+
+  levelViewBtn?.addEventListener('click', () => setSelectorView('level'));
+  allFloorsViewBtn?.addEventListener('click', () => {
+    setSelectorView('all');
+    requestAnimationFrame(() => allFloorsPanel?.querySelector('.unit-table-wrap')?.scrollTo({ top: 0, left: 0 }));
+  });
+
+  function unitMatchesFilters(u, typeFilter, statusFilter) {
+    if (typeFilter !== 'all' && u.type !== typeFilter) return false;
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'available') return isAvailableStatus(u.status);
+    return u.status === statusFilter;
+  }
+
+  function renderLevelSelector() {
+    if (!selectedBlock) return;
+
+    const typeFilter = document.getElementById('drawerTypeFilter').value;
+    const statusFilter = document.getElementById('drawerStatusFilter').value;
+    const floors = residentialFloors(selectedBlock).slice().sort((a,b) => b-a);
+
+    if (!floors.includes(selectedFloor)) selectedFloor = floors[0] ?? null;
+
+    levelRail.innerHTML = '';
+    for (const floor of floors) {
+      const floorUnits = blockUnits(selectedBlock.id).filter(u => u.floor === floor);
+      const matching = floorUnits.filter(u => unitMatchesFilters(u, typeFilter, statusFilter));
+      const taken = floorUnits.filter(u => ['reported_taken','confirmed_taken'].includes(u.status)).length;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'level-chip';
+      btn.setAttribute('role','tab');
+      btn.setAttribute('aria-selected', String(floor === selectedFloor));
+      btn.classList.toggle('active', floor === selectedFloor);
+      btn.classList.toggle('no-match', matching.length === 0);
+      btn.innerHTML = `<strong>${floorNumber(floor)}</strong>${taken ? `<span>${taken} taken</span>` : ''}`;
+      btn.addEventListener('click', () => {
+        selectedFloor = floor;
+        selectedUnit = null;
+        quickUnitBar.hidden = true;
+        quickUnitFeedback.textContent = '';
+        renderLevelSelector();
+      });
+      levelRail.appendChild(btn);
+    }
+
+    if (selectedFloor == null) {
+      currentLevelLabel.textContent = 'No residential levels';
+      currentLevelMeta.textContent = '';
+      levelUnitGrid.innerHTML = '';
+      return;
+    }
+
+    const floorUnits = selectedBlock.stacks
+      .map(stack => blockUnits(selectedBlock.id).find(u => u.floor === selectedFloor && u.stack === stack.no))
+      .filter(Boolean);
+    const visibleUnits = floorUnits.filter(u => unitMatchesFilters(u, typeFilter, statusFilter));
+    const available = floorUnits.filter(u => isAvailableStatus(u.status)).length;
+
+    currentLevelLabel.textContent = `Level ${floorNumber(selectedFloor)}`;
+    currentLevelMeta.textContent = `${floorUnits.length} flats · ${available} available`;
+
+    levelUnitGrid.innerHTML = '';
+    if (!visibleUnits.length) {
+      const empty = document.createElement('div');
+      empty.className = 'level-unit-empty';
+      empty.innerHTML = '<strong>No flats match these filters on this level.</strong><span>Try another level or clear the filters.</span>';
+      levelUnitGrid.appendChild(empty);
+      return;
+    }
+
+    for (const u of visibleUnits) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `level-unit-card ${u.status}`;
+      if (selectedUnit?.id === u.id) btn.classList.add('selected-unit');
+
+      const listedPrice = Number.isFinite(u.listedPrice) ? money(u.listedPrice) : '';
+      btn.innerHTML = `
+        <span class="level-unit-card-top">
+          <strong>#${floorNumber(u.floor)}-${u.stack}</strong>
+          <span class="level-unit-status">${statusLabel(u.status)}</span>
+        </span>
+        <span class="level-unit-type">${typeLabel(u.type)}</span>
+        ${listedPrice ? `<span class="level-unit-price">${listedPrice}</span>` : ''}
+      `;
+      btn.addEventListener('click', () => selectUnitForQuickAction(u));
+      levelUnitGrid.appendChild(btn);
+    }
+
+    const activeChip = levelRail.querySelector('.level-chip.active');
+    activeChip?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  }
+
   function specialTableRow(label, detail = '') {
     const tr = document.createElement('tr');
     tr.className = 'special-level-row';
@@ -562,6 +680,7 @@
 
   function renderUnitGrid() {
     if (!selectedBlock) return;
+    renderLevelSelector();
     const typeFilter = document.getElementById('drawerTypeFilter').value;
     const statusFilter = document.getElementById('drawerStatusFilter').value;
     const head = document.getElementById('unitTableHead');
@@ -608,10 +727,7 @@
         btn.textContent = `#${floorNumber(level)}-${stack.no}`;
         btn.title = `${typeLabel(u.type)} · ${statusLabel(u.status)}`;
         if (typeFilter !== 'all' && u.type !== typeFilter) btn.classList.add('hidden-type');
-        const matchesStatus = statusFilter === 'all'
-          || (statusFilter === 'available' && isAvailableStatus(u.status))
-          || u.status === statusFilter;
-        if (!matchesStatus) btn.classList.add('hidden-status');
+        if (!unitMatchesFilters(u, typeFilter, statusFilter)) btn.classList.add('hidden-status');
         btn.addEventListener('click', () => selectUnitForQuickAction(u));
         td.appendChild(btn);
         tr.appendChild(td);
@@ -632,6 +748,7 @@
 
   function selectUnitForQuickAction(u) {
     selectedUnit = u;
+    selectedFloor = u.floor;
     quickUnitFeedback.textContent = '';
     updateQuickUnitBar();
     renderUnitGrid();

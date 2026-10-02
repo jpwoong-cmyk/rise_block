@@ -172,13 +172,36 @@
       </label>
     </div>
 
-    <div class="unit-grid-hint">Tap a flat, then choose Taken, Available or Details.</div>
-    <div class="unit-table-wrap">
-      <table class="unit-table">
-        <thead id="unitTableHead"></thead>
-        <tbody id="unitTableBody"></tbody>
-      </table>
-    </div>
+    <section class="flat-selector" aria-label="Choose a flat">
+      <div class="selector-view-switch" role="group" aria-label="Flat selector view">
+        <button id="levelViewBtn" class="selector-view-btn active" type="button">By level</button>
+        <button id="allFloorsViewBtn" class="selector-view-btn" type="button">All floors</button>
+      </div>
+
+      <div id="levelSelectorView" class="level-selector-view">
+        <div class="level-selector-head">
+          <div>
+            <span class="level-selector-kicker">LEVEL</span>
+            <strong id="currentLevelLabel">Level —</strong>
+            <span id="currentLevelMeta"></span>
+          </div>
+          <span class="level-selector-hint">Choose a level, then a flat</span>
+        </div>
+
+        <div id="levelRail" class="level-rail" role="tablist" aria-label="Residential levels"></div>
+        <div id="levelUnitGrid" class="level-unit-grid" aria-live="polite"></div>
+      </div>
+
+      <div id="allFloorsPanel" class="all-floors-panel" hidden>
+        <div class="unit-grid-hint">Overview of every level and stack</div>
+        <div class="unit-table-wrap">
+          <table class="unit-table">
+            <thead id="unitTableHead"></thead>
+            <tbody id="unitTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <div id="quickUnitBar" class="quick-unit-bar" hidden>
       <div class="quick-unit-copy">

@@ -209,3 +209,10 @@ It is not strong identity verification. A determined person can still reset a br
 - Report Update opens with no form fields until Block quota, Unit status, or Queue progress is selected.
 - Only the selected report form is rendered.
 - Available/report-confirmed-available states are presented simply as Available to residents.
+
+## V1.7 selection UX
+- Keeps the 3D estate for discovery, but uses a simpler 2D flat selector inside each block.
+- Block view now defaults to By level: horizontally scrollable level chips plus clean flat cards.
+- Each card shows unit number, flat type, listed price and current status.
+- Tapping a flat keeps the existing one-tap Taken / Available / Details action bar.
+- The original floor x stack matrix remains available under All floors for power users.
