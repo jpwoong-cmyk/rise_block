@@ -1,125 +1,70 @@
-# Berlayar Rise Community Flat Tracker — V1
+# Berlayar Rise Community Flat Tracker — V1.2
 
-A GitHub + Vercel-ready prototype for a community flat-selection tracker focused only on **Berlayar Rise**.
+A GitHub/Vercel-ready static prototype for a Berlayar Rise community flat-selection tracker.
 
-## What V1 contains
+## What V1.2 adds
 
-- Interactive 3D estate view using Three.js.
-- Six residential blocks positioned as a simplified interpretation of the published site plan.
-- Clickable blocks with block-level available/total counts.
-- Unit matrix for every residential stack and published residential level.
-- All **1,976 units** generated from block + stack + level rules.
-- Flat-type filters.
-- HDB public indicative price ranges and floor areas.
-- Source dialog inside the app.
-- No database yet. Community reporting is intentionally disabled until persistent shared storage is connected.
+- Source-informed 3D precinct view rather than only residential tower massing.
+- Telok Blangah MRT shown north of the project.
+- Block 203 six-storey MSCP with a schematic roof garden, roof shelters and first-storey commercial-use description.
+- Separate three-storey preschool volume with green roof.
+- Residents’ Network Centre marker at Block 201B.
+- Precinct pavilion, playground, fitness and hardcourt representations.
+- Sheltered-linkway network and two simplified drop-off areas.
+- Surrounding Berlayar Street, Berlayar Drive, Telok Blangah Road / West Coast Highway, future-park land and future-residential land.
+- Clickable site features with provenance notes.
+- Estate → Block → Unit → Floor-plan navigation.
+- Each unit opens an original schematic floor plan for its flat type, room list, floor area and official public flat-type price range.
+- “Highlight this floor in 3D” shows the selected unit’s level on its block.
+- 2D interactive fallback if the remote Three.js module cannot load.
 
-## Dataset sanity checks
+## Data boundary
 
-The generated unit data reconciles to the official June 2026 flat supply:
+This is **not** an HDB live availability feed and does not access Singpass or My Flat Dashboard.
 
-| Flat type | Units |
-|---|---:|
-| 2-Room Flexi Type 1 | 172 |
-| 2-Room Flexi Type 2 | 644 |
-| 3-Room | 172 |
-| 4-Room | 988 |
-| **Total** | **1,976** |
+The static starting data contains 1,976 units across Blocks 200A, 200B, 201A, 201B, 204A and 204B. The unit generator is validated against the published project totals and flat-type totals.
 
-Residential block totals generated from the elevation charts:
+Exact selling prices for individual units are **not fabricated**. The UI only shows the publicly published indicative price range for the unit’s flat type. If an exact unit-level public source becomes available later, add it as a separately sourced field.
 
-| Block | Storeys / published top level | Generated units | Estimated wait |
-|---|---:|---:|---:|
-| 200A | 46 | 344 | 54 months |
-| 200B | 49 | 368 | 54 months |
-| 201A | 49 (roof garden level; residential unit grid to 48) | 360 | 54 months |
-| 201B | 46 | 344 | 49 months |
-| 204A | 39 | 304 | 49 months |
-| 204B | 33 | 256 | 49 months |
+The 3D site is a source-informed orientation model, not a survey/BIM model. Facility placement, sheltered-link geometry and building forms are deliberately simplified from the public site plan.
+
+The in-app floor plans are **original schematic diagrams, not reproductions of source images and not to scale**. A link to the public floor-plan source is provided in each unit view.
 
 ## Public sources used
 
-1. **HDB — June 2026 BTO launch announcement**  
-   https://www.hdb.gov.sg/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise  
-   Used for official launch/classification context and the 14% subsidy recovery rate.
+1. HDB — June 2026 BTO launch announcement
+2. HDB — Annex A, June 2026 BTO Flat Supply and Pricing Details
+3. HDB — Berlayar estate masterplan
+4. BTOHQ — Berlayar Rise project page and public site-plan image
+5. 99.co — publicly accessible Berlayar Rise site/elevation material
+6. Stacked Homes — June 2026 BTO review, facility cross-check and public floor-plan layouts
+7. DollarsAndSense — cross-check for MSCP commercial uses and Residents’ Network Centre at Block 201B
 
-2. **HDB — Annex A: June 2026 BTO Flat Supply and Pricing Details**  
-   https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf  
-   Used for official flat supply, floor areas, indicative pricing and 49/54-month waiting time.
-
-3. **HDB — June 2026 application rates**  
-   https://services-homes.hdb.gov.sg/sales/application-rate/bto/202606  
-   Cross-checks 816 2-Room Flexi, 172 3-Room and 988 4-Room units.
-
-4. **99.co — Berlayar Rise site plan and elevation charts**  
-   https://www.99.co/singapore/hdb/berlayar-rise---prime-de1ykFxT10z80WICTzZfAC0W  
-   Publicly accessible site plan and elevation/unit-distribution charts used to map residential blocks, stacks, flat types and levels.
-
-5. **Stacked Homes — June 2026 BTO launch review**  
-   https://stackedhomes.com/june-2026-bto-launch-review/  
-   Used as a cross-check for six residential blocks, block completion groups and published stack references.
-
-## Important price limitation
-
-The public HDB June 2026 source reviewed gives **indicative price ranges by flat type**, and explicitly notes that actual prices vary according to the attributes of the individual flat.
-
-V1 therefore **does not invent an exact price for #12-105, #38-141, etc.** The unit detail panel shows the official flat-type range and marks exact unit price as `Not publicly verified`.
-
-If a legitimate public per-unit price list becomes available later, add it as a separate mapping keyed by `block-floor-stack`.
+The exact URLs are available from the **Sources** dialog in the app.
 
 ## Run locally
 
-Because `app.js` uses browser ES modules, run a small local web server rather than double-clicking `index.html`.
+Extract the ZIP and open `index.html`.
 
-### Python
+The 3D view imports Three.js from `esm.sh`, so internet access is required for 3D. If that import fails, V1.2 now displays an interactive 2D fallback instead of a blank screen.
 
-```bash
-python -m http.server 8080
-```
-
-Then open:
-
-```text
-http://localhost:8080
-```
-
-## Put on GitHub
+## Deploy with GitHub + Vercel
 
 1. Create a new GitHub repository.
-2. Upload all files in this folder to the repository root.
-3. Commit and push.
-
-## Deploy on Vercel
-
-1. In Vercel, choose **Add New → Project**.
-2. Import the GitHub repository.
-3. Framework preset: **Other** (static site).
-4. No build command is needed.
+2. Upload the contents of this folder to the repository root.
+3. In Vercel, create a new project and import that GitHub repository.
+4. No build command is required.
 5. Deploy.
 
-`vercel.json` is included so Vercel serves this as a simple static project.
+`vercel.json` is already included for the static deployment.
 
-## Phase 2: shared community reports
+## What is deliberately not implemented yet
 
-Do **not** store shared reports in localStorage. When ready, connect a small hosted database and add server-side Vercel endpoints such as:
+- Shared community reports / confirmations.
+- User accounts.
+- Database writes.
+- Ethnic-quota updates.
+- Queue/dropout community submissions.
+- Exact unit-level HDB prices.
 
-- `GET /api/units`
-- `POST /api/reports`
-- `POST /api/reports/:id/confirm`
-- `GET /api/progress`
-
-Personal watchlists can still use localStorage later because they are device-specific rather than shared truth.
-
-## Files
-
-- `index.html` — page structure
-- `styles.css` — responsive visual design
-- `app.js` — 3D scene, interactions, unit grid and validation
-- `data/berlayar-data.js` — public-source project schema
-- `vercel.json` — static Vercel configuration
-
-
-
-## V1.1 viewer fix
-
-The 3D viewer now loads Three.js and OrbitControls through browser-safe dynamic ESM imports. `app.js` is a normal script rather than a local ES module, so opening `index.html` directly no longer fails simply because it was loaded from `file://`. A visible loading/error state is also shown instead of a blank scene if the remote Three.js dependency cannot load.
+Those should be added only after persistent shared storage and moderation/trust rules are selected.
