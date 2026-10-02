@@ -1,18 +1,4 @@
-/*
-  Berlayar Rise public-source seed data — V1.3.
-
-  DATA FIDELITY RULES
-  - verified: directly supported by an HDB/public brochure table, unit-distribution chart,
-    site-plan label, or an explicitly named public source.
-  - crossChecked: supported by a secondary public project guide and consistent with the
-    published site-plan material.
-  - schematic: x/z coordinates and simplified 3D footprints are visual interpretations
-    for orientation only. They are NOT surveyed coordinates or BIM geometry.
-  - live flat status is NOT sourced from HDB. All units begin as "untracked".
-*/
 window.BERLAYAR_DATA = {
-  version: "1.4",
-
   project: {
     name: "Berlayar Rise",
     town: "Bukit Merah",

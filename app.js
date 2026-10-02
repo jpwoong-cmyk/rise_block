@@ -39,7 +39,7 @@
             type: stack.type,
             listedPrice,
             status: DATA.project.statusBaseline || 'untracked',
-            basis: 'Unit existence / stack / flat type is source-derived. Listed price, where shown, comes from the uploaded Berlayar price charts. Live selection status is community-tracked.'
+            basis: 'Unit details follow the published Berlayar Rise plans. Listed prices come from the Berlayar Rise price charts, while selection status comes from community updates.'
           });
         }
       }
@@ -340,7 +340,6 @@
   function exportFavourites() {
     const payload = {
       app: 'Berlayar Rise Tracker',
-      version: 1,
       exportedAt: new Date().toISOString(),
       favourites: [...favouriteKeys]
     };
@@ -492,13 +491,13 @@
     window.setTimeout(() => target.classList.remove('tap-animate'), 430);
   });
 
-  // ---------- V1.4.1 shared community data (Supabase / riseblock only) ----------
+  // ---------- Community updates ----------
   const communityPanel = document.getElementById('communityPanel');
   const communityBackdrop = document.getElementById('communityBackdrop');
   const reportResult = document.getElementById('reportResult');
   const quotaByBlock = new Map();
   let currentProgress = null;
-  let supabase = null;
+  let communityClient = null;
   let communityDbReady = false;
 
   const reporterTokenKey = 'berlayar_rise_reporter_token_v1';
@@ -618,7 +617,7 @@
   async function fetchAllUnitStatuses() {
     const rows = [];
     for (let start = 0; start < 3000; start += 1000) {
-      const { data, error } = await supabase.from('unit_status_current').select('*').order('unit_id').range(start, start + 999);
+      const { data, error } = await communityClient.from('unit_status_current').select('*').order('unit_id').range(start, start + 999);
       if (error) throw error;
       rows.push(...(data || []));
       if (!data || data.length < 1000) break;
@@ -627,11 +626,11 @@
   }
 
   async function refreshCommunityData() {
-    if (!supabase) return;
+    if (!communityClient) return;
     const [unitRows, quotaRes, progressRes] = await Promise.all([
       fetchAllUnitStatuses(),
-      supabase.from('block_quota_current').select('*'),
-      supabase.from('selection_progress_current').select('*').limit(1)
+      communityClient.from('block_quota_current').select('*'),
+      communityClient.from('selection_progress_current').select('*').limit(1)
     ]);
     if (quotaRes.error) throw quotaRes.error;
     if (progressRes.error) throw progressRes.error;
@@ -646,18 +645,18 @@
   }
 
   async function connectCommunityData() {
-    const cfg = window.BERLAYAR_SUPABASE;
+    const cfg = window.BERLAYAR_COMMUNITY;
     if (!cfg?.url || !cfg?.publishableKey) {
       setDbStatus('Community updates are unavailable.', true);
       return;
     }
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      supabase = createClient(cfg.url, cfg.publishableKey, { db: { schema: cfg.schema || 'riseblock' } });
+      communityClient = createClient(cfg.url, cfg.publishableKey, { db: { schema: cfg.schema || 'riseblock' } });
       await refreshCommunityData();
     } catch (err) {
       console.error('Community data connection failed:', err);
-      const message = String(err?.message || err || 'Unknown database error');
+      const message = String(err?.message || err || 'Connection error');
       if (/schema|exposed|profile/i.test(message)) {
         setDbStatus('Community updates are temporarily unavailable.', true);
       } else {
@@ -777,7 +776,7 @@
   document.querySelectorAll('[data-report-kind]').forEach(btn => btn.addEventListener('click', () => setReportKind(btn.dataset.reportKind)));
 
   async function runSubmission(form, rpcName, payload, successText) {
-    if (!communityDbReady || !supabase) {
+    if (!communityDbReady || !communityClient) {
       showReportResult('Community updates are not connected right now. Please try again shortly.', false);
       return;
     }
@@ -785,7 +784,7 @@
     button.disabled = true;
     resetReportResult();
     try {
-      const { error } = await supabase.rpc(rpcName, payload);
+      const { error } = await communityClient.rpc(rpcName, payload);
       if (error) throw error;
       showReportResult(successText, true);
       await refreshCommunityData();
@@ -1101,7 +1100,7 @@
 
   async function quickReportSelectedUnit(status) {
     if (!selectedUnit) return;
-    if (!communityDbReady || !supabase) {
+    if (!communityDbReady || !communityClient) {
       quickUnitFeedback.textContent = 'Community updates are unavailable right now.';
       return;
     }
@@ -1111,7 +1110,7 @@
     quickUnitFeedback.textContent = status === 'taken' ? 'Reporting taken…' : 'Reporting available…';
 
     try {
-      const { error } = await supabase.rpc('submit_unit_report', {
+      const { error } = await communityClient.rpc('submit_unit_report', {
         p_block_code: selectedUnit.block,
         p_unit_no: `${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`,
         p_status: status,

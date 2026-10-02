@@ -33,7 +33,7 @@ button,select{font:inherit} button{color:inherit}
 @media(max-width:660px){.topbar{padding:0 14px}.brand-mark{width:38px;height:38px}.top-actions .ghost-btn:first-child{display:none}.scene-shell{height:660px}.project-card{left:14px;top:14px;width:calc(100% - 28px)}.project-title{font-size:30px}.layers{right:14px;top:178px}.legend{right:14px;top:auto;bottom:108px;grid-template-columns:1fr 1fr}.notice{left:14px;right:14px;bottom:14px;max-width:none;flex-direction:column;gap:3px}.notice strong{white-space:normal}.summary-strip{grid-template-columns:repeat(2,1fr)}.metric,.metric:nth-child(4){border-right:1px solid var(--line);border-top:1px solid var(--line)}.metric:nth-child(even){border-right:0}.metric:last-child{grid-column:1/-1}.drawer-toolbar{flex-direction:column}.unit-copy,.floorplan-panel{padding:20px}.unit-actions{grid-template-columns:1fr}.floorplan-canvas{padding:6px;min-height:260px}.feature-label{font-size:8px}.road-label{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
-/* ---------- V1.3 source-fidelity + unit-depth additions ---------- */
+/* Interface */
 :root{--untracked:#8fa19a}
 .dot.untracked{background:var(--untracked)}
 .unit-cell.untracked{background:rgba(143,161,154,.11);color:#c0cec8;border-color:rgba(143,161,154,.16)}
@@ -83,7 +83,7 @@ button,select{font:inherit} button{color:inherit}
 @media(max-width:980px){.unit-actions{grid-template-columns:1fr 1fr}.unit-actions .action-btn:first-child{grid-column:1/-1}}
 @media(max-width:660px){.unit-actions{grid-template-columns:1fr}.unit-actions .action-btn:first-child{grid-column:auto}.certainty-grid{grid-template-columns:1fr}.certainty-grid>div{border-right:0!important;border-bottom:1px solid var(--line)!important}.certainty-grid>div:last-child{border-bottom:0!important}.unit-elevation{max-height:360px}}
 
-/* ---------- V1.4.1 community tracker ---------- */
+/* Interface */
 :root{--reported-available:#76cfd0;--conflicting:#d28bf0}
 .ghost-btn.primary{background:var(--accent);color:#0b1713;border-color:var(--accent);font-weight:800}
 .dot.reported-available{background:var(--reported-available)}
@@ -114,7 +114,7 @@ button,select{font:inherit} button{color:inherit}
 @media(max-width:660px){.ghost-btn.primary{padding:8px 9px}.community-progress{padding:18px 14px}.progress-metrics{grid-template-columns:1fr 1fr}.quota-values{grid-template-columns:1fr}.quota-values>div{border-right:0;border-bottom:1px solid var(--line)}.quota-values>div:last-child{border-bottom:0}.three-inputs,.two-inputs{grid-template-columns:1fr}.community-panel{width:100vw}.community-chat{padding:14px}.legend{font-size:9px;gap:5px}}
 
 
-/* ---------- V1.5 UX pass ---------- */
+/* Interface */
 .unit-context{
   color:var(--accent-2);
   font-size:10px;
@@ -391,7 +391,7 @@ button,select{font:inherit} button{color:inherit}
 }
 
 
-/* ---------- V1.7 cleaner flat selection ---------- */
+/* Interface */
 .flat-selector{
   min-height:0;
   flex:1 1 auto;
@@ -606,9 +606,7 @@ button,select{font:inherit} button{color:inherit}
 }
 
 
-/* ==================================================================
-   V1.8 — Premium map / civic utility polish
-   ================================================================== */
+/* Interface enhancements */
 :root{
   --ease-ui:cubic-bezier(.2,.78,.28,1);
   --ease-snap:cubic-bezier(.2,.9,.26,1);
@@ -1083,7 +1081,7 @@ dialog::backdrop{animation:backdropIn .2s ease both}
 }
 
 
-/* ---------- V1.8.1 mobile label fix ---------- */
+/* Interface */
 @media(max-width:760px){
   .block-label{
     display:block!important;
@@ -1137,9 +1135,7 @@ dialog::backdrop{animation:backdropIn .2s ease both}
 }
 
 
-/* ==================================================================
-   V1.9.1 — working private favourites + Taken = red
-   ================================================================== */
+/* Interface enhancements */
 .unit-cell.reported_taken{background:rgba(233,130,114,.16)!important;color:#ffc3b9!important;border-color:rgba(233,130,114,.30)!important}
 .unit-cell.confirmed_taken{background:rgba(239,83,80,.22)!important;color:#ffe2e0!important;border-color:rgba(239,83,80,.48)!important}
 .status-pill.reported_taken{color:#2b0d0b!important;background:#e98272!important}
