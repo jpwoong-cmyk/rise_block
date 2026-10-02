@@ -116,10 +116,27 @@
 
   function updateSummary() {
     const c = statusCounts();
+        const availableByType = {
+      '2R-T1': 0,
+      '2R-T2': 0,
+      '3R': 0,
+      '4R': 0
+    };
+
+    for (const u of units) {
+      if (isAvailableStatus(u.status) && Object.hasOwn(availableByType, u.type)) {
+        availableByType[u.type] += 1;
+      }
+    }
+
     document.getElementById('totalUnits').textContent = units.length.toLocaleString();
     document.getElementById('availableUnits').textContent = availableCount(c).toLocaleString();
     document.getElementById('reportedUnits').textContent = c.reported_taken.toLocaleString();
     document.getElementById('takenUnits').textContent = c.confirmed_taken.toLocaleString();
+    document.getElementById('available2RT1').textContent = availableByType['2R-T1'].toLocaleString();
+    document.getElementById('available2RT2').textContent = availableByType['2R-T2'].toLocaleString();
+    document.getElementById('available3R').textContent = availableByType['3R'].toLocaleString();
+    document.getElementById('available4R').textContent = availableByType['4R'].toLocaleString();
     if (window.__berlayarRefreshBlockLabels) window.__berlayarRefreshBlockLabels();
   }
   updateSummary();
