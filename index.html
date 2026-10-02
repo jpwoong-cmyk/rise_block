@@ -35,7 +35,7 @@
       <div class="scene-vignette" aria-hidden="true"></div>
 
       <div class="project-card glass">
-        <div class="project-kicker">JUNE 2026 BTO · PRIME · V1.4</div>
+        <div class="project-kicker">JUNE 2026 BTO · PRIME · V1.4.1</div>
         <div class="project-title">Explore the precinct</div>
         <p>Drag to rotate · scroll to zoom · click a block or source-backed site feature</p>
         <div class="project-tags">
@@ -194,8 +194,8 @@
           <div><dt>Stack</dt><dd id="unitStack"></dd></div>
           <div><dt>Flat type</dt><dd id="unitType"></dd></div>
           <div><dt>Floor area</dt><dd id="unitArea"></dd></div>
-          <div><dt>HDB public price range</dt><dd id="unitPrice"></dd></div>
-          <div><dt>Exact unit price</dt><dd>Not publicly verified</dd></div>
+          <div><dt>Source-chart listed price</dt><dd id="unitPrice"></dd></div>
+          <div><dt>HDB public flat-type range</dt><dd id="unitPriceRange"></dd></div>
         </dl>
 
         <div class="unit-subsection">
@@ -343,10 +343,11 @@
     <div class="eyebrow">PUBLIC DATA SOURCES</div>
     <h2>What the tracker is built from</h2>
     <div id="sourcesList" class="sources-list"></div>
-    <p class="source-footnote">V1.4 separates source-backed facts from schematic geometry and stores community observations in Supabase. Unit stack/type and residential-level data is reconciled against the public unit-distribution charts. 3D coordinates, paths and simplified building masses are orientation sketches, not HDB BIM/survey data. Live unit status comes only from community reports; unreported units remain untracked.</p>
+    <p class="source-footnote">V1.4.1 separates source-backed facts from schematic geometry and stores community observations in Supabase. Unit stack/type and residential-level data is reconciled against the public unit-distribution charts. 3D coordinates, paths and simplified building masses are orientation sketches, not HDB BIM/survey data. Live unit status comes only from community reports; unreported units remain untracked.</p>
   </dialog>
 
   <script src="data/berlayar-data.js"></script>
+  <script src="data/berlayar-unit-prices.js"></script>
   <script src="supabase-config.js"></script>
   <script src="app.js"></script>
 </body>

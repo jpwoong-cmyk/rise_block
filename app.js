@@ -29,14 +29,17 @@
     for (const block of DATA.blocks) {
       for (const floor of residentialFloors(block)) {
         for (const stack of block.stacks) {
+          const unitNo = `${floorNumber(floor)}-${stack.no}`;
+          const listedPrice = window.BERLAYAR_UNIT_PRICES?.[`${block.id}|${unitNo}`] ?? null;
           out.push({
-            id: `${block.id}-${floorNumber(floor)}-${stack.no}`,
+            id: `${block.id}-${unitNo}`,
             block: block.id,
             floor,
             stack: stack.no,
             type: stack.type,
+            listedPrice,
             status: DATA.project.statusBaseline || 'untracked',
-            basis: 'Unit existence / stack / flat type is source-derived. Live selection status is not yet tracked.'
+            basis: 'Unit existence / stack / flat type is source-derived. Listed price, where shown, comes from the uploaded Berlayar price charts. Live selection status is community-tracked.'
           });
         }
       }
@@ -62,8 +65,13 @@
       if (block.stacks.length !== 8) notes.push(`${block.id}: expected 8 stack columns, found ${block.stacks.length}.`);
     }
 
-    if (errors.length) console.error('Berlayar V1.4 dataset validation FAILED:', errors);
-    else console.info(`Berlayar V1.4 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals reconcile.`);
+    const missingPrices = units.filter(u => !Number.isFinite(u.listedPrice));
+    if (missingPrices.length) errors.push(`Unit price chart coverage: ${missingPrices.length} generated units do not have a listed price.`);
+    const sourcePriceCount = Object.keys(window.BERLAYAR_UNIT_PRICES || {}).length;
+    if (sourcePriceCount !== DATA.project.totalUnits) errors.push(`Unit price chart contains ${sourcePriceCount} prices, expected ${DATA.project.totalUnits}.`);
+
+    if (errors.length) console.error('Berlayar V1.4.1 dataset validation FAILED:', errors);
+    else console.info(`Berlayar V1.4.1 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals and ${sourcePriceCount.toLocaleString()} source-chart prices reconcile.`);
     if (notes.length) console.info('Berlayar dataset notes:', notes);
   }
   validateData();
@@ -112,7 +120,7 @@
   let selectedUnit = null;
 
 
-  // ---------- V1.4 shared community data (Supabase / riseblock only) ----------
+  // ---------- V1.4.1 shared community data (Supabase / riseblock only) ----------
   const communityPanel = document.getElementById('communityPanel');
   const communityBackdrop = document.getElementById('communityBackdrop');
   const reportResult = document.getElementById('reportResult');
@@ -638,7 +646,10 @@
     document.getElementById('unitStack').textContent = u.stack;
     document.getElementById('unitType').textContent = meta.label;
     document.getElementById('unitArea').textContent = `${meta.area} sqm total · ${meta.internalArea} sqm internal`;
-    document.getElementById('unitPrice').textContent = `${money(meta.price99[0])} – ${money(meta.price99[1])} (HDB flat-type range)`;
+    document.getElementById('unitPrice').textContent = Number.isFinite(u.listedPrice)
+      ? `${money(u.listedPrice)} · uploaded Berlayar price chart`
+      : 'Not available in the uploaded price charts';
+    document.getElementById('unitPriceRange').textContent = `${money(meta.price99[0])} – ${money(meta.price99[1])}`;
     document.getElementById('floorplanTitle').textContent = meta.label;
     document.getElementById('elevationTitle').textContent = `Block ${u.block} · #${floorNumber(u.floor)}-${u.stack}`;
     document.getElementById('unitElevation').innerHTML = renderElevation(u);

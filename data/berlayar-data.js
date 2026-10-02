@@ -101,8 +101,8 @@ window.BERLAYAR_DATA = {
       distributionSource: "elevation-200"
     },
     {
-      id: "200B", storeys: 49, total: 368, waitMonths: 54,
-      floors: { min: 2, max: 49, terraceLevels: [20,40] },
+      id: "200B", storeys: 48, total: 360, waitMonths: 54,
+      floors: { min: 2, max: 48, terraceLevels: [20,40] },
       roofGardenAtTop: false,
       stacks: [
         {no:"117",type:"2R-T2"},{no:"119",type:"2R-T2"},{no:"121",type:"2R-T2"},{no:"123",type:"2R-T2"},
@@ -112,8 +112,8 @@ window.BERLAYAR_DATA = {
       distributionSource: "elevation-200"
     },
     {
-      id: "201A", storeys: 49, total: 360, waitMonths: 54,
-      floors: { min: 2, max: 48, terraceLevels: [9,30] },
+      id: "201A", storeys: 49, total: 368, waitMonths: 54,
+      floors: { min: 2, max: 49, terraceLevels: [9,29] },
       roofGardenAtTop: true,
       roofGardenLabel: "Accessible roof garden shown at the top of the published elevation",
       stacks: [
@@ -125,7 +125,7 @@ window.BERLAYAR_DATA = {
     },
     {
       id: "201B", storeys: 46, total: 344, waitMonths: 49,
-      floors: { min: 2, max: 46, terraceLevels: [22,37] },
+      floors: { min: 2, max: 46, terraceLevels: [22,36] },
       roofGardenAtTop: true,
       roofGardenLabel: "Accessible roof garden shown at the top of the published elevation",
       stacks: [

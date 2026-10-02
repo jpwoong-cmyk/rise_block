@@ -1,8 +1,8 @@
-# Berlayar Rise Community Flat Tracker — V1.4
+# Berlayar Rise Community Flat Tracker — V1.4.1
 
 A GitHub/Vercel-ready Berlayar Rise community tracker with a source-informed 3D estate view and shared reporting backed by Supabase.
 
-## What changed in V1.4
+## What changed in V1.4.1
 
 - Connected to Supabase project `jxmafsnxfupdvbqnfixd`, schema `riseblock` only.
 - Seeded the verified Berlayar Rise unit master data into Supabase: 6 residential blocks, 48 stacks, 1,976 units.
@@ -13,6 +13,10 @@ A GitHub/Vercel-ready Berlayar Rise community tracker with a source-informed 3D 
 - Added a block quota panel and live selection-progress panel.
 - Individual unit cells now take their live community state from Supabase.
 - Added lightweight consensus handling instead of letting one report overwrite the tracker.
+- Re-audited block / floor data against the uploaded HDB brochure and price charts.
+- Corrected 200B / 201A master totals and the 201A / 201B sky-terrace levels.
+- Added `data/berlayar-unit-prices.js` with 1,976 source-chart listed prices, one for every corrected sale unit.
+- Added `database/` operational scripts for safe test reset, verification and source-audit history.
 
 ## Supabase objects created
 
@@ -96,8 +100,8 @@ The Supabase seed reconciles to:
 | Block | Units |
 |---|---:|
 | 200A | 344 |
-| 200B | 368 |
-| 201A | 360 |
+| 200B | 360 |
+| 201A | 368 |
 | 201B | 344 |
 | 204A | 304 |
 | 204B | 256 |
@@ -123,7 +127,29 @@ The app still does **not** claim:
 - exact BIM footprints;
 - exact façade/window position of each stack;
 - a live HDB availability feed;
-- exact per-unit HDB selling prices.
+- an official live HDB per-unit price feed.
+
+### Uploaded unit-price charts
+
+The project source workbooks contain one numeric listed price for every corrected sale unit: 816 2-room, 172 3-room and 988 4-room prices, totalling 1,976.
+
+V1.4.1 displays that value as **“listed in uploaded Berlayar price chart”**. It does not relabel the workbook as a live HDB feed.
+
+## Testing and reset
+
+The repository now includes `database/reset-test-data.sql`.
+
+Run it when a testing round is finished. It deletes only:
+
+- `riseblock.unit_reports`
+- `riseblock.block_quota_reports`
+- `riseblock.selection_progress_reports`
+
+It keeps the project, blocks, stacks and 1,976 master units intact. Do **not** reset the whole Supabase project because other schemas share the same project.
+
+After reset, run `database/verify-baseline.sql`.
+
+See `database/source-audit.md` for the source corrections and `database/migrations/` for the SQL already applied to the live `riseblock` schema.
 
 ## Primary public sources
 
@@ -161,6 +187,6 @@ The app imports Three.js and Supabase JS from `esm.sh`, so internet access is re
 
 ## Abuse resistance
 
-V1.4 uses append-only report functions, RLS, no direct anonymous table updates, a short submission throttle, and community consensus instead of single-report overwrite.
+V1.4.1 uses append-only report functions, RLS, no direct anonymous table updates, a short submission throttle, and community consensus instead of single-report overwrite.
 
 It is not strong identity verification. A determined person can still reset a browser token or spam from multiple clients. If the tracker becomes heavily used, the next protection layer should be CAPTCHA / Turnstile or lightweight sign-in rather than trying to infer identity from personal data.
