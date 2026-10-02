@@ -224,3 +224,9 @@ It is not strong identity verification. A determined person can still reset a br
 - Building labels were redesigned as compact map identity plates with an anchored marker.
 - Added restrained motion for button clicks, panel entrances, drawers, report flows and dialogs.
 - Motion respects prefers-reduced-motion.
+
+## V1.8.1 mobile fix
+- Restores the residential block labels on mobile.
+- Fixes an older mobile CSS rule that accidentally hid every span inside the new V1.8 label component.
+- Mobile labels intentionally show only the block number (200A, 200B, etc.) plus the anchor pin to prevent overlap.
+- Desktop keeps the richer availability / flat-type detail.

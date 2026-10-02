@@ -260,7 +260,7 @@ button,select{font:inherit} button{color:inherit}
   .notice span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .block-label{min-width:44px;padding:5px 6px}
   .block-label strong{font-size:11px}
-  .block-label span{display:none}
+  .block-label .live-sub{display:none}
   .feature-label.context{display:none!important}
   .feature-label{font-size:7px;padding:4px 5px}
 
@@ -1079,5 +1079,59 @@ dialog::backdrop{animation:backdropIn .2s ease both}
   .community-backdrop,
   .tap-animate{
     animation:none!important;
+  }
+}
+
+
+/* ---------- V1.8.1 mobile label fix ---------- */
+@media(max-width:760px){
+  .block-label{
+    display:block!important;
+    min-width:0!important;
+    padding:0!important;
+    opacity:1;
+  }
+
+  .block-label.dimmed{
+    opacity:.22;
+  }
+
+  .block-label>.block-label-copy{
+    display:grid!important;
+    min-width:46px;
+    padding:5px 7px 6px;
+    gap:0;
+    text-align:center;
+    border-left:1px solid rgba(216,240,158,.72);
+    background:rgba(7,18,15,.92);
+    box-shadow:0 7px 18px rgba(0,0,0,.34);
+  }
+
+  .block-label-copy small{
+    display:none!important;
+  }
+
+  .block-label-copy strong{
+    display:block!important;
+    font-size:11px;
+    line-height:1.05;
+    letter-spacing:.035em;
+  }
+
+  /* Mobile only needs the building identity. Hide the secondary count text
+     so all six labels remain readable without becoming a cloud of boxes. */
+  .block-label-copy>span{
+    display:none!important;
+  }
+
+  .block-label>.block-label-pointer{
+    display:block!important;
+    height:6px;
+    bottom:-6px;
+  }
+
+  .block-label-pointer::after{
+    width:4px;
+    height:4px;
   }
 }
