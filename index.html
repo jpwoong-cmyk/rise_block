@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d1b18" />
+  <title>Berlayar Rise Flat Tracker</title>
+  <meta name="description" content="Community flat selection tracker for Berlayar Rise." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">BR</div>
+      <div>
+        <div class="eyebrow">COMMUNITY TRACKER</div>
+        <h1>Berlayar Rise</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="resetViewBtn" class="ghost-btn" type="button">Reset view</button>
+      <button id="sourcesBtn" class="ghost-btn" type="button">Sources</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="scene-shell" aria-label="Interactive 3D view of Berlayar Rise">
+      <div id="scene"></div>
+      <div class="scene-vignette" aria-hidden="true"></div>
+
+      <div class="project-card glass">
+        <div class="project-kicker">JUNE 2026 BTO · PRIME</div>
+        <div class="project-title">Explore the estate</div>
+        <p>Drag to rotate · scroll to zoom · click a residential block</p>
+        <div class="project-tags">
+          <span>6 residential blocks</span>
+          <span>1,976 flats</span>
+          <span>33–49 storeys</span>
+        </div>
+      </div>
+
+      <div class="legend glass" aria-label="Flat status legend">
+        <div><span class="dot available"></span>Available baseline</div>
+        <div><span class="dot reported"></span>Reported taken</div>
+        <div><span class="dot taken"></span>Taken</div>
+        <div><span class="dot unknown"></span>Unknown</div>
+      </div>
+
+      <div class="notice glass">
+        <strong>Community data, not HDB live availability.</strong>
+        <span>V1 starts from the published project supply. Shared reporting will be connected when persistent storage is added.</span>
+      </div>
+    </section>
+
+    <section class="summary-strip" aria-label="Project summary">
+      <div class="metric"><span>Total flats</span><strong id="totalUnits">1,976</strong></div>
+      <div class="metric"><span>Available</span><strong id="availableUnits">1,976</strong></div>
+      <div class="metric"><span>Reported</span><strong id="reportedUnits">0</strong></div>
+      <div class="metric"><span>Taken</span><strong id="takenUnits">0</strong></div>
+      <div class="metric compact"><span>2-Room Flexi</span><strong>816</strong></div>
+      <div class="metric compact"><span>3-Room</span><strong>172</strong></div>
+      <div class="metric compact"><span>4-Room</span><strong>988</strong></div>
+    </section>
+
+    <section class="controls-panel">
+      <div>
+        <div class="eyebrow">FILTER THE MODEL</div>
+        <h2>Find your flat type</h2>
+      </div>
+      <div id="typeFilters" class="filter-row" role="group" aria-label="Flat type filters">
+        <button class="filter active" data-type="all" type="button">All</button>
+        <button class="filter" data-type="2R-T1" type="button">2R Type 1</button>
+        <button class="filter" data-type="2R-T2" type="button">2R Type 2</button>
+        <button class="filter" data-type="3R" type="button">3-Room</button>
+        <button class="filter" data-type="4R" type="button">4-Room</button>
+      </div>
+    </section>
+  </main>
+
+  <aside id="blockDrawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <button id="closeDrawerBtn" class="icon-btn" type="button" aria-label="Close block details">×</button>
+      <div>
+        <div class="eyebrow">RESIDENTIAL BLOCK</div>
+        <h2 id="drawerBlockName">Block 200A</h2>
+        <p id="drawerBlockMeta"></p>
+      </div>
+    </div>
+
+    <div class="drawer-stats">
+      <div><span>Available</span><strong id="drawerAvailable">0</strong></div>
+      <div><span>Total</span><strong id="drawerTotal">0</strong></div>
+      <div><span>Wait</span><strong id="drawerWait">—</strong></div>
+    </div>
+
+    <div class="drawer-toolbar">
+      <label>
+        <span>Show</span>
+        <select id="drawerTypeFilter">
+          <option value="all">All flat types</option>
+          <option value="2R-T1">2-Room Flexi Type 1</option>
+          <option value="2R-T2">2-Room Flexi Type 2</option>
+          <option value="3R">3-Room</option>
+          <option value="4R">4-Room</option>
+        </select>
+      </label>
+      <label>
+        <span>Status</span>
+        <select id="drawerStatusFilter">
+          <option value="all">All statuses</option>
+          <option value="available">Available</option>
+          <option value="reported">Reported taken</option>
+          <option value="taken">Taken</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="unit-table-wrap">
+      <table class="unit-table">
+        <thead id="unitTableHead"></thead>
+        <tbody id="unitTableBody"></tbody>
+      </table>
+    </div>
+  </aside>
+
+  <dialog id="unitDialog" class="unit-dialog">
+    <button id="closeUnitBtn" class="icon-btn dialog-close" type="button" aria-label="Close unit details">×</button>
+    <div class="eyebrow">UNIT DETAILS</div>
+    <h2 id="unitTitle">#12-105</h2>
+    <div id="unitStatusPill" class="status-pill available">Available</div>
+    <dl class="unit-details">
+      <div><dt>Block</dt><dd id="unitBlock"></dd></div>
+      <div><dt>Floor</dt><dd id="unitFloor"></dd></div>
+      <div><dt>Stack</dt><dd id="unitStack"></dd></div>
+      <div><dt>Flat type</dt><dd id="unitType"></dd></div>
+      <div><dt>Estimated area</dt><dd id="unitArea"></dd></div>
+      <div><dt>HDB public price range</dt><dd id="unitPrice"></dd></div>
+      <div><dt>Exact unit price</dt><dd>Not publicly verified</dd></div>
+    </dl>
+    <div class="unit-note">
+      Exact unit-level selling prices are intentionally not estimated. The public HDB source reviewed publishes indicative ranges by flat type and notes that actual prices vary by flat attributes.
+    </div>
+    <button class="report-btn" type="button" disabled>Community reporting connects in Phase 2</button>
+  </dialog>
+
+  <dialog id="sourcesDialog" class="sources-dialog">
+    <button id="closeSourcesBtn" class="icon-btn dialog-close" type="button" aria-label="Close sources">×</button>
+    <div class="eyebrow">PUBLIC DATA SOURCES</div>
+    <h2>Where this V1 gets its facts</h2>
+    <div id="sourcesList" class="sources-list"></div>
+    <p class="source-footnote">The 3D massing is a simplified interpretation of the published site plan, not an architectural BIM model. Unit stack/type and level distribution are data-driven from the published elevation charts.</p>
+  </dialog>
+
+  <script src="data/berlayar-data.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
