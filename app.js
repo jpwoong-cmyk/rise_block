@@ -70,8 +70,8 @@
     const sourcePriceCount = Object.keys(window.BERLAYAR_UNIT_PRICES || {}).length;
     if (sourcePriceCount !== DATA.project.totalUnits) errors.push(`Unit price chart contains ${sourcePriceCount} prices, expected ${DATA.project.totalUnits}.`);
 
-    if (errors.length) console.error('Berlayar V1.4.1 dataset validation FAILED:', errors);
-    else console.info(`Berlayar V1.4.1 dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals and ${sourcePriceCount.toLocaleString()} source-chart prices reconcile.`);
+    if (errors.length) console.error('Berlayar dataset validation FAILED:', errors);
+    else console.info(`Berlayar dataset validated: ${units.length.toLocaleString()} units; block + flat-type totals and ${sourcePriceCount.toLocaleString()} source-chart prices reconcile.`);
     if (notes.length) console.info('Berlayar dataset notes:', notes);
   }
   validateData();
@@ -118,6 +118,14 @@
   const sourcesDialog = document.getElementById('sourcesDialog');
   let selectedBlock = null;
   let selectedUnit = null;
+
+  const quickUnitBar = document.getElementById('quickUnitBar');
+  const quickUnitTitle = document.getElementById('quickUnitTitle');
+  const quickUnitMeta = document.getElementById('quickUnitMeta');
+  const quickUnitFeedback = document.getElementById('quickUnitFeedback');
+  const quickTakenBtn = document.getElementById('quickTakenBtn');
+  const quickAvailableBtn = document.getElementById('quickAvailableBtn');
+  const quickDetailsBtn = document.getElementById('quickDetailsBtn');
 
 
   // ---------- V1.4.1 shared community data (Supabase / riseblock only) ----------
@@ -196,10 +204,11 @@
 
   function updateUnitStatusUi(u) {
     const pill = document.getElementById('unitStatusPill');
-    if (!pill) return;
-    pill.className = `status-pill ${u.status}`;
-    pill.textContent = statusLabel(u.status);
-    document.getElementById('unitAvailabilityCertainty').textContent = statusLabel(u.status);
+    if (pill) {
+      pill.className = `status-pill ${u.status}`;
+      pill.textContent = statusLabel(u.status);
+    }
+    updateQuickUnitBar();
   }
 
   function renderQuotaForSelectedBlock() {
@@ -265,14 +274,14 @@
     currentProgress = progressRes.data?.[0] || null;
     renderQuotaForSelectedBlock();
     renderProgress();
-    setDbStatus('Live community data connected · Supabase riseblock schema');
+    setDbStatus('Community updates connected.');
     communityDbReady = true;
   }
 
   async function connectCommunityData() {
     const cfg = window.BERLAYAR_SUPABASE;
     if (!cfg?.url || !cfg?.publishableKey) {
-      setDbStatus('Shared tracker is not configured.', true);
+      setDbStatus('Community updates are unavailable.', true);
       return;
     }
     try {
@@ -283,9 +292,9 @@
       console.error('Community data connection failed:', err);
       const message = String(err?.message || err || 'Unknown database error');
       if (/schema|exposed|profile/i.test(message)) {
-        setDbStatus('Supabase is ready, but riseblock must be added to Data API → Exposed schemas.', true);
+        setDbStatus('Community updates are temporarily unavailable.', true);
       } else {
-        setDbStatus(`Community data unavailable: ${message}`, true);
+        setDbStatus('Community updates are temporarily unavailable.', true);
       }
     }
   }
@@ -310,31 +319,73 @@
     reportResult.className = `report-result ${ok ? 'success' : 'error'}`;
     reportResult.textContent = message;
   }
+  const reportChooser = document.getElementById('reportChooser');
+  const reportFlowTop = document.getElementById('reportFlowTop');
+  const reportFlowTitle = document.getElementById('reportFlowTitle');
+  const reportContextText = document.getElementById('reportContextText');
+  const reportTitles = {
+    quota: 'Block quota',
+    unit: 'Unit status',
+    progress: 'Queue progress'
+  };
+
+  function showReportChooser() {
+    document.querySelectorAll('[data-report-kind]').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('quotaReportForm').hidden = true;
+    document.getElementById('unitReportForm').hidden = true;
+    document.getElementById('progressReportForm').hidden = true;
+    reportChooser.hidden = false;
+    reportFlowTop.hidden = true;
+    reportContextText.textContent = '';
+    resetReportResult();
+  }
+
   function setReportKind(kind, context = {}) {
     document.querySelectorAll('[data-report-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.reportKind === kind));
     document.getElementById('quotaReportForm').hidden = kind !== 'quota';
     document.getElementById('unitReportForm').hidden = kind !== 'unit';
     document.getElementById('progressReportForm').hidden = kind !== 'progress';
+    reportChooser.hidden = true;
+    reportFlowTop.hidden = false;
+    reportFlowTitle.textContent = reportTitles[kind] || '';
+    reportContextText.textContent = '';
     resetReportResult();
+
     const now = localDateTimeValue();
+
     if (kind === 'quota') {
-      populateBlockSelect(document.getElementById('quotaReportBlock'), context.block || selectedBlock?.id);
+      const preferredBlock = context.block || selectedBlock?.id || DATA.blocks[0].id;
+      populateBlockSelect(document.getElementById('quotaReportBlock'), preferredBlock);
       document.getElementById('quotaReportObserved').value = now;
+      document.getElementById('quotaBlockField').hidden = Boolean(context.block);
+      if (context.block) reportContextText.textContent = `Block ${preferredBlock}`;
     }
+
     if (kind === 'unit') {
       const blockCode = context.block || selectedUnit?.block || selectedBlock?.id || DATA.blocks[0].id;
+      const unitCode = context.unit || (selectedUnit ? `${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : null);
       populateBlockSelect(document.getElementById('unitReportBlock'), blockCode);
-      populateUnitSelect(blockCode, context.unit || (selectedUnit ? `${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : null));
+      populateUnitSelect(blockCode, unitCode);
       document.getElementById('unitReportObserved').value = now;
+      document.getElementById('unitBlockField').hidden = Boolean(context.block);
+      document.getElementById('unitUnitField').hidden = Boolean(context.unit);
+      if (context.unit) reportContextText.textContent = `Block ${blockCode} · #${unitCode}`;
+      else if (context.block) reportContextText.textContent = `Block ${blockCode}`;
     }
-    if (kind === 'progress') document.getElementById('progressReportObserved').value = now;
+
+    if (kind === 'progress') {
+      document.getElementById('progressReportObserved').value = now;
+    }
   }
+
   function openCommunity(kind = null, context = {}) {
     communityPanel.classList.add('open');
     communityPanel.setAttribute('aria-hidden','false');
     communityBackdrop.hidden = false;
     if (kind) setReportKind(kind, context);
+    else showReportChooser();
   }
+
   function closeCommunity() {
     communityPanel.classList.remove('open');
     communityPanel.setAttribute('aria-hidden','true');
@@ -354,12 +405,13 @@
     openCommunity('unit', {block:selectedUnit.block, unit:`${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`});
   });
   document.getElementById('closeCommunityBtn').addEventListener('click', closeCommunity);
+  document.getElementById('changeReportTypeBtn').addEventListener('click', showReportChooser);
   communityBackdrop.addEventListener('click', closeCommunity);
   document.querySelectorAll('[data-report-kind]').forEach(btn => btn.addEventListener('click', () => setReportKind(btn.dataset.reportKind)));
 
   async function runSubmission(form, rpcName, payload, successText) {
     if (!communityDbReady || !supabase) {
-      showReportResult('Shared database is not connected yet. Check the Supabase Data API exposed-schema setting.', false);
+      showReportResult('Community updates are not connected right now. Please try again shortly.', false);
       return;
     }
     const button = form.querySelector('.submit-report-btn');
@@ -391,7 +443,7 @@
       p_source_note: document.getElementById('unitReportNote').value,
       p_evidence_url: document.getElementById('unitReportEvidence').value,
       p_reporter_token: reporterToken
-    }, 'Unit observation added. The displayed status now reflects the latest community consensus.');
+    }, 'Unit status submitted.');
   });
 
   document.getElementById('quotaReportForm').addEventListener('submit', async e => {
@@ -407,7 +459,7 @@
       p_source_note: document.getElementById('quotaReportNote').value,
       p_evidence_url: document.getElementById('quotaReportEvidence').value,
       p_reporter_token: reporterToken
-    }, 'Block quota observation added. Matching reports will raise its confidence.');
+    }, 'Block quota submitted.');
   });
 
   document.getElementById('progressReportForm').addEventListener('submit', async e => {
@@ -427,7 +479,7 @@
       p_source_note: document.getElementById('progressReportNote').value,
       p_evidence_url: document.getElementById('progressReportEvidence').value,
       p_reporter_token: reporterToken
-    }, 'Selection progress added. Queue-based progress and unit-by-unit tracking remain separate signals.');
+    }, 'Queue progress submitted.');
   });
 
   connectCommunityData();
@@ -443,13 +495,16 @@
 
   function openBlock(block) {
     selectedBlock = block;
+    selectedUnit = null;
+    quickUnitBar.hidden = true;
+    quickUnitFeedback.textContent = '';
     if (window.__berlayarFlyToBlock) window.__berlayarFlyToBlock(block);
     const subset = blockUnits(block.id);
     const c = statusCounts(subset);
-    document.getElementById('drawerBlockName').textContent = `Block ${block.id}`;
-    document.getElementById('drawerBlockMeta').textContent = `${block.storeys} storeys · ${block.stacks.length} stack columns · ${block.stacks.map(s=>s.no).join(', ')}`;
-    document.getElementById('drawerGroundMeta').textContent = block.groundAmenities?.length ? `Ground-level source marker: ${block.groundAmenities.join(', ')}` : '';
-    document.getElementById('drawerSpecialMeta').textContent = blockSpecialText(block);
+    document.getElementById('drawerBlockName').textContent = block.id;
+    document.getElementById('drawerBlockMeta').textContent = `${block.total.toLocaleString()} flats · ${block.storeys} storeys`;
+    document.getElementById('drawerGroundMeta').textContent = '';
+    document.getElementById('drawerSpecialMeta').textContent = '';
     document.getElementById('drawerUntracked').textContent = c.untracked.toLocaleString();
     document.getElementById('drawerTotal').textContent = block.total.toLocaleString();
     document.getElementById('drawerWait').textContent = `${block.waitMonths} mo`;
@@ -468,6 +523,16 @@
   document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
   document.getElementById('drawerTypeFilter').addEventListener('change', renderUnitGrid);
   document.getElementById('drawerStatusFilter').addEventListener('change', renderUnitGrid);
+
+  const quotaCard = document.getElementById('quotaCard');
+  const quotaToggleBtn = document.getElementById('quotaToggleBtn');
+  function setQuotaCollapsed(collapsed) {
+    quotaCard.classList.toggle('collapsed', collapsed);
+    quotaToggleBtn.textContent = collapsed ? 'Show' : 'Hide';
+    quotaToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  }
+  quotaToggleBtn.addEventListener('click', () => setQuotaCollapsed(!quotaCard.classList.contains('collapsed')));
+  setQuotaCollapsed(window.matchMedia('(max-width: 760px)').matches);
 
   function specialTableRow(label, detail = '') {
     const tr = document.createElement('tr');
@@ -525,17 +590,75 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `unit-cell ${u.status}`;
+        if (selectedUnit?.id === u.id) btn.classList.add('selected-unit');
         btn.textContent = `#${floorNumber(level)}-${stack.no}`;
         btn.title = `${typeLabel(u.type)} · ${statusLabel(u.status)}`;
         if (typeFilter !== 'all' && u.type !== typeFilter) btn.classList.add('hidden-type');
         if (statusFilter !== 'all' && u.status !== statusFilter) btn.classList.add('hidden-status');
-        btn.addEventListener('click', () => openUnit(u));
+        btn.addEventListener('click', () => selectUnitForQuickAction(u));
         td.appendChild(btn);
         tr.appendChild(td);
       }
       body.appendChild(tr);
     }
   }
+
+  function updateQuickUnitBar() {
+    if (!selectedUnit || !selectedBlock || selectedUnit.block !== selectedBlock.id) {
+      quickUnitBar.hidden = true;
+      return;
+    }
+    quickUnitBar.hidden = false;
+    quickUnitTitle.textContent = `#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`;
+    quickUnitMeta.textContent = `${typeLabel(selectedUnit.type)} · ${statusLabel(selectedUnit.status)}`;
+  }
+
+  function selectUnitForQuickAction(u) {
+    selectedUnit = u;
+    quickUnitFeedback.textContent = '';
+    updateQuickUnitBar();
+    renderUnitGrid();
+  }
+
+  async function quickReportSelectedUnit(status) {
+    if (!selectedUnit) return;
+    if (!communityDbReady || !supabase) {
+      quickUnitFeedback.textContent = 'Community updates are unavailable right now.';
+      return;
+    }
+
+    const buttons = [quickTakenBtn, quickAvailableBtn, quickDetailsBtn];
+    buttons.forEach(btn => btn.disabled = true);
+    quickUnitFeedback.textContent = status === 'taken' ? 'Reporting taken…' : 'Reporting available…';
+
+    try {
+      const { error } = await supabase.rpc('submit_unit_report', {
+        p_block_code: selectedUnit.block,
+        p_unit_no: `${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}`,
+        p_status: status,
+        p_observed_at: new Date().toISOString(),
+        p_source_type: 'community_observation',
+        p_source_note: '',
+        p_evidence_url: '',
+        p_reporter_token: reporterToken
+      });
+      if (error) throw error;
+      await refreshCommunityData();
+      updateQuickUnitBar();
+      quickUnitFeedback.textContent = status === 'taken' ? 'Taken report added.' : 'Available report added.';
+    } catch (err) {
+      console.error(err);
+      quickUnitFeedback.textContent = err?.message || 'Could not submit the update.';
+    } finally {
+      buttons.forEach(btn => btn.disabled = false);
+    }
+  }
+
+  quickTakenBtn.addEventListener('click', () => quickReportSelectedUnit('taken'));
+  quickAvailableBtn.addEventListener('click', () => quickReportSelectedUnit('available'));
+  quickDetailsBtn.addEventListener('click', () => {
+    if (selectedUnit) openUnit(selectedUnit);
+  });
 
   // ---------- Unit flat-plan redraws ----------
   function roomRect(x,y,w,h,label,kind='normal') {
@@ -593,7 +716,7 @@
       rooms += roomRect(605,330,120,100,'Air-con Ledge','external');
       rooms += `<path class="plan-entry" d="M300 430h-58v-54h58"/><text class="plan-entry-label" x="235" y="457">ENTRY</text>`;
     }
-    return `<svg viewBox="0 0 760 500" role="img" aria-label="Simplified schematic floor plan for ${typeLabel(type)}"><rect class="plan-bg" x="12" y="12" width="736" height="476" rx="10"/>${rooms}</svg>`;
+    return `<svg viewBox="0 0 760 500" role="img" aria-label="Simplified floor plan for ${typeLabel(type)}"><rect class="plan-bg" x="12" y="12" width="736" height="476" rx="10"/>${rooms}</svg>`;
   }
 
   function renderElevation(u) {
@@ -639,7 +762,7 @@
     const block = DATA.blocks.find(b=>b.id===u.block);
     const distributionSource = sourceMap.get(block.distributionSource);
 
-    document.getElementById('unitCrumbBlock').textContent = `BLOCK ${u.block}`;
+    document.getElementById('unitCrumbBlock').textContent = `Block ${u.block}`;
     document.getElementById('unitTitle').textContent = `#${floorNumber(u.floor)}-${u.stack}`;
     document.getElementById('unitBlock').textContent = `Block ${u.block}`;
     document.getElementById('unitFloor').textContent = floorNumber(u.floor);
@@ -647,8 +770,8 @@
     document.getElementById('unitType').textContent = meta.label;
     document.getElementById('unitArea').textContent = `${meta.area} sqm total · ${meta.internalArea} sqm internal`;
     document.getElementById('unitPrice').textContent = Number.isFinite(u.listedPrice)
-      ? `${money(u.listedPrice)} · uploaded Berlayar price chart`
-      : 'Not available in the uploaded price charts';
+      ? money(u.listedPrice)
+      : 'Not available';
     document.getElementById('unitPriceRange').textContent = `${money(meta.price99[0])} – ${money(meta.price99[1])}`;
     document.getElementById('floorplanTitle').textContent = meta.label;
     document.getElementById('elevationTitle').textContent = `Block ${u.block} · #${floorNumber(u.floor)}-${u.stack}`;
@@ -672,8 +795,7 @@
   function openFeature(feature) {
     document.getElementById('featureTitle').textContent = feature.name;
     document.getElementById('featureDetail').textContent = feature.detail;
-    const confidence = feature.confidence === 'verified' ? 'Verified fact' : 'Cross-checked public source';
-    document.getElementById('featureBasis').textContent = `${confidence} · ${feature.geometry === 'schematic' ? 'schematic position' : 'source position'}`;
+    document.getElementById('featureBasis').textContent = feature.sourceIds?.length ? 'Published reference' : 'Community reference';
     const links = (feature.sourceIds || []).map(id => sourceMap.get(id)).filter(Boolean);
     document.getElementById('featureSourceLinks').innerHTML = links.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name} ↗</a>`).join('');
     featureDialog.showModal();
@@ -922,7 +1044,7 @@
       name:`Block ${p.id} · source-plan label`,
       short:`${p.id}`,
       x:p.x,z:p.z,height:.8,confidence:'verified',geometry:'schematic',sourceIds:['brochure'],
-      detail:`The public Berlayar Rise site plan labels this standalone structure as Block ${p.id}. V1.3 intentionally does not assign it a use because that use has not been verified from the sources used for this build.`
+      detail:`The published Berlayar Rise site plan labels this structure as Block ${p.id}. Its use is not clear enough in the references, so it is left unlabelled rather than guessed.`
     }));
     for (const f of planOnlyFeatures) {
       const mesh=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.4,.65,20),new THREE.MeshStandardMaterial({color:0x7f725f,roughness:.95}));
@@ -947,8 +1069,7 @@
         const el=labels.get(block.id);
         if(!el) continue;
         const c=statusCounts(blockUnits(block.id));
-        const tracked=block.total-c.untracked;
-        el.innerHTML=`<strong>Block ${block.id}</strong><span>${c.confirmed_taken.toLocaleString()} confirmed taken · ${block.total.toLocaleString()} total</span><span class="live-sub">${tracked.toLocaleString()} units community-tracked</span>`;
+        el.innerHTML=`<strong>${block.id}</strong><span>${c.confirmed_taken.toLocaleString()} / ${block.total.toLocaleString()} taken</span>`;
       }
     }
     for(const block of DATA.blocks){
@@ -1101,7 +1222,7 @@
         <button class="fallback-block b204b" data-block="204B">204B</button>
         <button class="fallback-feature preschool" data-feature="preschool">3-storey preschool</button>
         <button class="fallback-feature mscp" data-feature="mscp">203 MSCP + roof garden</button>
-        <div class="fallback-warning"><strong>3D library could not load.</strong><span>The source-derived block/unit tracker still works from this 2D fallback. Internet access is required for the remote Three.js module.</span></div>
+        <div class="fallback-warning"><strong>3D library could not load.</strong><span>You can still select blocks and flats from this map.</span></div>
       </div>`;
     sceneHost.querySelectorAll('[data-block]').forEach(el=>el.addEventListener('click',()=>{const b=DATA.blocks.find(x=>x.id===el.dataset.block);if(b)openBlock(b);}));
     sceneHost.querySelectorAll('[data-feature]').forEach(el=>el.addEventListener('click',()=>{const f=DATA.siteFeatures.find(x=>x.id===el.dataset.feature);if(f)openFeature(f);}));

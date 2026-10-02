@@ -36,7 +36,7 @@ window.BERLAYAR_DATA = {
       color: 0xe8a07d,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162648/Berlayar-Rise-2-Room-Flexi-Type-1.jpg",
       rooms: ["Living / dining", "Bedroom", "Kitchen", "Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
+      layoutNote: "Layout preview only. Not to scale.",
       plan: "2R-T1"
     },
     "2R-T2": {
@@ -48,7 +48,7 @@ window.BERLAYAR_DATA = {
       color: 0xd96d5d,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162703/Berlayar-Rise-2-Room-Flexi-Type-2.jpg",
       rooms: ["Living / dining", "Bedroom", "Flexible space", "Kitchen", "Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
+      layoutNote: "Layout preview only. Not to scale.",
       plan: "2R-T2"
     },
     "3R": {
@@ -60,7 +60,7 @@ window.BERLAYAR_DATA = {
       color: 0x91c779,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162714/Berlayar-Rise-3-Room-1600x1132.jpg",
       rooms: ["Living / dining", "Bedroom", "Main bedroom", "Dry kitchen", "Kitchen / utility", "2 Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
+      layoutNote: "Layout preview only. Not to scale.",
       plan: "3R"
     },
     "4R": {
@@ -72,7 +72,7 @@ window.BERLAYAR_DATA = {
       color: 0xe2d15a,
       sourcePlanUrl: "https://stacked-editorial.sgp1.digitaloceanspaces.com/editorial/wp-content/uploads/2026/06/17162814/Berlayar-Rise-4-Room-1600x1132.jpg",
       rooms: ["Living / dining", "2 Bedrooms", "Main bedroom", "Kitchen", "Service yard", "2 Bath / WC", "Household shelter", "Air-con ledge"],
-      layoutNote: "Source-derived room arrangement only. The diagram in this tracker is an original simplified redraw and is not to scale.",
+      layoutNote: "Layout preview only. Not to scale.",
       plan: "4R"
     }
   },
@@ -175,7 +175,7 @@ window.BERLAYAR_DATA = {
     {
       id: "preschool", category: "community", name: "3-storey Preschool", short: "3-storey preschool",
       x: 20.7, z: -5.2, height: 2.5, confidence: "verified",
-      detail: "The site-plan legend identifies a 3-storey preschool with a non-accessible green roof. The building mass here is a simplified orientation model.",
+      detail: "The site plan identifies a 3-storey preschool with a non-accessible green roof.",
       geometry: "schematic", sourceIds: ["brochure"]
     },
     {
@@ -193,55 +193,55 @@ window.BERLAYAR_DATA = {
     {
       id: "community-zone", category: "community", name: "Community / communal spaces", short: "Community space",
       x: -18.0, z: 2.6, height: 0.8, confidence: "verified",
-      detail: "The published site-plan legend includes precinct pavilion(s), drop-off porch(es) and space reserved for future community use. This marker groups those communal uses without claiming an exact building footprint.",
+      detail: "The site plan includes precinct pavilion(s), drop-off porch(es) and space reserved for future community use. The marker groups these communal uses together.",
       geometry: "schematic", sourceIds: ["brochure"]
     },
     {
       id: "play", category: "recreation", name: "Children’s playground areas", short: "Play areas",
       x: -13.4, z: 5.7, height: 0.5, confidence: "verified",
-      detail: "Children’s playground facilities are identified in the site-plan legend. The model uses a grouped marker rather than reproducing every source-plan symbol.",
+      detail: "Children’s playground facilities are identified in the site-plan legend. They are grouped here as one marker.",
       geometry: "schematic", sourceIds: ["brochure","design"]
     },
     {
       id: "fitness", category: "recreation", name: "Adult & elderly fitness areas", short: "Fitness areas",
       x: 4.7, z: 8.2, height: 0.5, confidence: "verified",
-      detail: "Adult and elderly fitness stations are identified in the site-plan legend. Their 3D geometry here is simplified.",
+      detail: "Adult and elderly fitness stations are identified in the site-plan legend.",
       geometry: "schematic", sourceIds: ["brochure"]
     },
     {
       id: "hardcourt", category: "recreation", name: "Hardcourt", short: "Hardcourt",
       x: 18.2, z: 1.0, height: 0.3, confidence: "verified",
-      detail: "A hardcourt is included in the site-plan play-facility legend. This 3D pad is a simplified source-plan marker.",
+      detail: "A hardcourt is included in the site-plan play-facility legend.",
       geometry: "schematic", sourceIds: ["brochure"]
     },
     {
       id: "roofshelters", category: "recreation", name: "MSCP roof-garden shelters", short: "Roof shelters",
       x: 12.1, z: 9.8, height: 3.8, confidence: "crossChecked",
-      detail: "Public project material describes shelters and recreation facilities on the MSCP roof garden. The canopies in this tracker are symbolic, not construction geometry.",
+      detail: "Public project material describes shelters and recreation facilities on the MSCP roof garden.",
       geometry: "schematic", sourceIds: ["stacked"]
     },
     {
       id: "linkways", category: "community", name: "Sheltered linkway network", short: "Sheltered links",
       x: 3.3, z: -3.0, height: 1.1, confidence: "crossChecked",
-      detail: "Public project analysis states that sheltered linkways connect the residential blocks to the MSCP, Telok Blangah MRT and future bus stops. The routes drawn here are a connectivity sketch, not surveyed alignments.",
+      detail: "Public project analysis states that sheltered linkways connect the residential blocks to the MSCP, Telok Blangah MRT and future bus stops.",
       geometry: "schematic", sourceIds: ["brochure","stacked"]
     },
     {
       id: "future-bus-west", category: "transport", name: "Future bus stop · west side", short: "Future bus stop",
       x: -28.2, z: 6.6, height: 0.4, confidence: "crossChecked",
-      detail: "Public site-plan analysis describes three future bus stops serving the project. Marker positions in this model are schematic interpretations of the plan.",
+      detail: "Public site-plan analysis describes three future bus stops serving the project.",
       geometry: "schematic", sourceIds: ["stacked","brochure"]
     },
     {
       id: "future-bus-south-1", category: "transport", name: "Future bus stop · Berlayar Drive", short: "Future bus stop",
       x: -1.5, z: 29.0, height: 0.4, confidence: "crossChecked",
-      detail: "One of three future bus-stop markers represented from public site-plan material. Position is schematic.",
+      detail: "One of three future bus stops shown in public site-plan material.",
       geometry: "schematic", sourceIds: ["stacked","brochure"]
     },
     {
       id: "future-bus-south-2", category: "transport", name: "Future bus stop · Berlayar Drive", short: "Future bus stop",
       x: 16.0, z: 28.0, height: 0.4, confidence: "crossChecked",
-      detail: "One of three future bus-stop markers represented from public site-plan material. Position is schematic.",
+      detail: "One of three future bus stops shown in public site-plan material.",
       geometry: "schematic", sourceIds: ["stacked","brochure"]
     },
     {

@@ -30,14 +30,14 @@
       <div id="scene"></div>
       <div id="sceneLoading" class="scene-loading" role="status">
         <strong>Loading Berlayar Rise…</strong>
-        <span>Building the precinct, links and 1,976-flat unit map.</span>
+        <span>Loading the estate and flats.</span>
       </div>
       <div class="scene-vignette" aria-hidden="true"></div>
 
       <div class="project-card glass">
-        <div class="project-kicker">JUNE 2026 BTO · PRIME · V1.4.1</div>
+        <div class="project-kicker">JUNE 2026 BTO · PRIME</div>
         <div class="project-title">Explore the precinct</div>
-        <p>Drag to rotate · scroll to zoom · click a block or source-backed site feature</p>
+        <p>Drag to rotate · scroll to zoom · tap a block to view flats</p>
         <div class="project-tags">
           <span>6 residential blocks</span>
           <span>1,976 flats</span>
@@ -62,8 +62,8 @@
       </div>
 
       <div class="notice glass">
-        <strong>Verified data, schematic geometry.</strong>
-        <span>Block / stack / flat-type / level data is source-checked. 3D placement is an orientation sketch, not surveyed geometry. Flat status starts untracked, not “available”.</span>
+        <strong>Community tracker</strong>
+        <span>Selection status is resident-reported. Check HDB before making a booking decision.</span>
       </div>
     </section>
 
@@ -79,9 +79,9 @@
 
     <section class="community-progress" aria-label="Community selection progress">
       <div class="progress-intro">
-        <div class="eyebrow">COMMUNITY SOURCE OF TRUTH</div>
+        <div class="eyebrow">SELECTION PROGRESS</div>
         <h2>Selection progress</h2>
-        <p id="dbStatusText">Connecting to shared tracker…</p>
+        <p id="dbStatusText">Loading community updates…</p>
       </div>
       <div class="progress-metrics">
         <div><span>Last queue reached</span><strong id="queueReached">—</strong></div>
@@ -97,8 +97,8 @@
 
     <section class="controls-panel">
       <div>
-        <div class="eyebrow">FILTER THE MODEL</div>
-        <h2>Find your flat type</h2>
+        <div class="eyebrow">FLAT TYPE</div>
+        <h2>Show flat types</h2>
       </div>
       <div id="typeFilters" class="filter-row" role="group" aria-label="Flat type filters">
         <button class="filter active" data-type="all" type="button">All</button>
@@ -114,8 +114,7 @@
     <div class="drawer-head">
       <button id="closeDrawerBtn" class="icon-btn" type="button" aria-label="Close block details">×</button>
       <div>
-        <div class="breadcrumb">ESTATE <span>›</span> BLOCK</div>
-        <h2 id="drawerBlockName">Block 200A</h2>
+        <h2 id="drawerBlockName">200A</h2>
         <p id="drawerBlockMeta"></p>
         <p id="drawerGroundMeta" class="drawer-ground-meta"></p>
         <p id="drawerSpecialMeta" class="drawer-ground-meta"></p>
@@ -128,22 +127,26 @@
       <div><span>Wait</span><strong id="drawerWait">—</strong></div>
     </div>
 
-    <section class="quota-card" aria-label="Latest block ethnic quota report">
+    <section id="quotaCard" class="quota-card" aria-label="Latest block ethnic quota report">
       <div class="quota-card-head">
         <div>
-          <div class="eyebrow">BLOCK ETHNIC QUOTA</div>
-          <h3>Latest community observation</h3>
+          <div class="eyebrow">ETHNIC QUOTA</div>
+          <h3>Block quota</h3>
         </div>
-        <button id="reportQuotaBtn" class="text-btn" type="button">Report quota</button>
+        <div class="quota-card-actions">
+          <button id="reportQuotaBtn" class="text-btn" type="button">Report</button>
+          <button id="quotaToggleBtn" class="text-btn quota-toggle" type="button" aria-expanded="true">Hide</button>
+        </div>
       </div>
-      <div id="quotaEmpty" class="quota-empty">No quota has been reported for this block yet.</div>
-      <div id="quotaValues" class="quota-values" hidden>
-        <div><span>Malay</span><strong id="quotaMalay">—</strong></div>
-        <div><span>Chinese</span><strong id="quotaChinese">—</strong></div>
-        <div><span>Indian / Others</span><strong id="quotaIndian">—</strong></div>
+      <div id="quotaCardBody" class="quota-card-body">
+        <div id="quotaEmpty" class="quota-empty">No quota reported yet.</div>
+        <div id="quotaValues" class="quota-values" hidden>
+          <div><span>Malay</span><strong id="quotaMalay">—</strong></div>
+          <div><span>Chinese</span><strong id="quotaChinese">—</strong></div>
+          <div><span>Indian / Others</span><strong id="quotaIndian">—</strong></div>
+        </div>
+        <div class="quota-meta"><span id="quotaConfidence">Not yet reported</span><span id="quotaObservedAt"></span></div>
       </div>
-      <div class="quota-meta"><span id="quotaConfidence">Not yet reported</span><span id="quotaObservedAt"></span></div>
-      <p>Quota is tracked at block level only. The tracker never assigns ethnicity to a specific household or unit.</p>
     </section>
 
     <div class="drawer-toolbar">
@@ -171,12 +174,25 @@
       </label>
     </div>
 
-    <div class="unit-grid-hint">Select a unit to open its source-derived elevation position and schematic flat layout. Sky-terrace rows are shown explicitly.</div>
+    <div class="unit-grid-hint">Tap a flat, then choose Taken, Available or Details.</div>
     <div class="unit-table-wrap">
       <table class="unit-table">
         <thead id="unitTableHead"></thead>
         <tbody id="unitTableBody"></tbody>
       </table>
+    </div>
+
+    <div id="quickUnitBar" class="quick-unit-bar" hidden>
+      <div class="quick-unit-copy">
+        <strong id="quickUnitTitle">#12-105</strong>
+        <span id="quickUnitMeta">4-Room · Untracked</span>
+        <small id="quickUnitFeedback"></small>
+      </div>
+      <div class="quick-unit-actions">
+        <button id="quickTakenBtn" class="quick-status-btn taken" type="button">Taken</button>
+        <button id="quickAvailableBtn" class="quick-status-btn available" type="button">Available</button>
+        <button id="quickDetailsBtn" class="quick-status-btn details" type="button">Details</button>
+      </div>
     </div>
   </aside>
 
@@ -184,7 +200,7 @@
     <button id="closeUnitBtn" class="icon-btn dialog-close" type="button" aria-label="Close unit details">×</button>
     <div class="unit-dialog-grid">
       <section class="unit-copy">
-        <div class="breadcrumb">ESTATE <span>›</span> <span id="unitCrumbBlock">BLOCK</span> <span>›</span> UNIT</div>
+        <div class="unit-context" id="unitCrumbBlock">Block</div>
         <h2 id="unitTitle">#12-105</h2>
         <div id="unitStatusPill" class="status-pill untracked">Untracked</div>
 
@@ -194,61 +210,52 @@
           <div><dt>Stack</dt><dd id="unitStack"></dd></div>
           <div><dt>Flat type</dt><dd id="unitType"></dd></div>
           <div><dt>Floor area</dt><dd id="unitArea"></dd></div>
-          <div><dt>Source-chart listed price</dt><dd id="unitPrice"></dd></div>
-          <div><dt>HDB public flat-type range</dt><dd id="unitPriceRange"></dd></div>
+          <div><dt>Listed price</dt><dd id="unitPrice"></dd></div>
+          <div><dt>Flat type price range</dt><dd id="unitPriceRange"></dd></div>
         </dl>
 
-        <div class="unit-subsection">
-          <div class="eyebrow">SOURCE CERTAINTY</div>
-          <div class="certainty-grid">
-            <div><span>Stack / flat type</span><strong>Verified</strong></div>
-            <div><span>Residential level</span><strong>Verified</strong></div>
-            <div><span>Live availability</span><strong id="unitAvailabilityCertainty">Untracked</strong></div>
-            <div><span>3D façade position</span><strong>Schematic</strong></div>
-          </div>
-        </div>
 
         <div class="unit-subsection">
-          <div class="eyebrow">LAYOUT CONTENT</div>
+          <div class="eyebrow">WHAT'S INSIDE</div>
           <div id="unitRooms" class="room-chips"></div>
           <p id="unitLayoutNote" class="unit-layout-note"></p>
         </div>
 
         <div class="unit-actions">
-          <button id="focusFloorBtn" class="action-btn" type="button">Locate this unit on the tower</button>
-          <a id="unitDistributionSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">View unit-distribution source ↗</a>
-          <a id="unitPlanSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">View public flat-plan source ↗</a>
+          <button id="focusFloorBtn" class="action-btn" type="button">Show in building</button>
+          <a id="unitDistributionSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">Unit reference ↗</a>
+          <a id="unitPlanSource" class="action-btn secondary" href="#" target="_blank" rel="noopener noreferrer">Floor plan reference ↗</a>
         </div>
 
         <div class="unit-note">
-          Exact unit-level selling prices are not estimated. Public HDB material reviewed for this build publishes indicative ranges by flat type and states that actual selling prices vary with individual flat attributes.
+          Listed price comes from the uploaded Berlayar price chart. Check HDB for the final selling price.
         </div>
         <button id="reportUnitBtn" class="report-btn active" type="button">Report this unit</button>
       </section>
 
-      <section class="floorplan-panel" aria-label="Unit elevation and schematic flat layout">
+      <section class="floorplan-panel" aria-label="Unit location and flat layout">
         <div class="elevation-section">
           <div class="floorplan-head">
             <div>
-              <div class="eyebrow">EXACT SOURCE-DERIVED LEVEL</div>
+              <div class="eyebrow">BUILDING POSITION</div>
               <h3 id="elevationTitle">Block elevation</h3>
             </div>
-            <span>Stack order + levels</span>
+            <span>Floor + stack</span>
           </div>
-          <div id="unitElevation" class="unit-elevation" aria-label="Source-derived block unit distribution"></div>
-          <p class="floorplan-disclaimer">This elevation reproduces the published stack order and residential / sky-terrace levels as data. It does not claim the selected stack’s compass-facing façade.</p>
+          <div id="unitElevation" class="unit-elevation" aria-label="Block floor and stack position"></div>
+          <p class="floorplan-disclaimer">Shows the selected floor and stack within the block.</p>
         </div>
 
         <div class="flatplan-section">
           <div class="floorplan-head">
             <div>
-              <div class="eyebrow">FLAT-TYPE LAYOUT</div>
+              <div class="eyebrow">LAYOUT PREVIEW</div>
               <h3 id="floorplanTitle">Flat layout</h3>
             </div>
-            <span>Schematic · not to scale</span>
+            <span>Not to scale</span>
           </div>
           <div id="floorplanCanvas" class="floorplan-canvas"></div>
-          <p class="floorplan-disclaimer">Original simplified redraw from the publicly shown room arrangement. Use the linked source for the published plan and dimensions.</p>
+          <p class="floorplan-disclaimer">Layout preview only. Use the floor plan reference for dimensions.</p>
         </div>
       </section>
     </div>
@@ -257,93 +264,108 @@
   <aside id="communityPanel" class="community-panel" aria-hidden="true">
     <div class="community-panel-head">
       <div>
-        <div class="eyebrow">BERLAYAR COMMUNITY UPDATE</div>
-        <h2>Report what you saw</h2>
+        <div class="eyebrow">COMMUNITY UPDATE</div>
+        <h2>Share an update</h2>
       </div>
       <button id="closeCommunityBtn" class="icon-btn" type="button" aria-label="Close community update">×</button>
     </div>
 
     <div id="communityChat" class="community-chat">
-      <div class="chat-bubble bot">What do you want to update?</div>
-      <div class="chat-choice-row">
-        <button class="chat-choice" data-report-kind="quota" type="button">Block quota</button>
-        <button class="chat-choice" data-report-kind="unit" type="button">Unit status</button>
-        <button class="chat-choice" data-report-kind="progress" type="button">Queue progress</button>
+      <div id="reportChooser" class="report-chooser">
+        <div class="chat-bubble bot">What do you want to update?</div>
+        <div class="chat-choice-row">
+          <button class="chat-choice" data-report-kind="quota" type="button">Block quota</button>
+          <button class="chat-choice" data-report-kind="unit" type="button">Unit status</button>
+          <button class="chat-choice" data-report-kind="progress" type="button">Queue progress</button>
+        </div>
+      </div>
+
+      <div id="reportFlowTop" class="report-flow-top" hidden>
+        <button id="changeReportTypeBtn" class="text-btn" type="button">← Change</button>
+        <strong id="reportFlowTitle"></strong>
+        <span id="reportContextText"></span>
       </div>
 
       <form id="quotaReportForm" class="report-flow" hidden>
-        <div class="chat-bubble bot">Which block and what remaining quota did you see?</div>
-        <label><span>Block</span><select id="quotaReportBlock" required></select></label>
+        <label id="quotaBlockField"><span>Block</span><select id="quotaReportBlock" required></select></label>
         <div class="three-inputs">
-          <label><span>Malay</span><input id="quotaReportMalay" type="number" min="0" required /></label>
-          <label><span>Chinese</span><input id="quotaReportChinese" type="number" min="0" required /></label>
-          <label><span>Indian / Others</span><input id="quotaReportIndian" type="number" min="0" required /></label>
+          <label><span>Malay remaining</span><input id="quotaReportMalay" type="number" min="0" inputmode="numeric" required /></label>
+          <label><span>Chinese remaining</span><input id="quotaReportChinese" type="number" min="0" inputmode="numeric" required /></label>
+          <label><span>Indian / Others remaining</span><input id="quotaReportIndian" type="number" min="0" inputmode="numeric" required /></label>
         </div>
-        <div class="report-common-fields">
-          <label><span>Observed at</span><input id="quotaReportObserved" type="datetime-local" required /></label>
-          <label><span>Source</span><select id="quotaReportSource"><option value="hdb_selection">Saw in HDB flat selection</option><option value="community_observation">Community observation</option><option value="other">Other</option></select></label>
-          <label><span>Optional note</span><textarea id="quotaReportNote" maxlength="500" placeholder="e.g. opening quota before today's appointments"></textarea></label>
-          <label><span>Optional evidence URL</span><input id="quotaReportEvidence" type="url" placeholder="https://…" /></label>
-        </div>
-        <button class="submit-report-btn" type="submit">Submit quota update</button>
+        <details class="report-more">
+          <summary>Add source or note</summary>
+          <div class="report-common-fields">
+            <label><span>Observed at</span><input id="quotaReportObserved" type="datetime-local" required /></label>
+            <label><span>Source</span><select id="quotaReportSource"><option value="community_observation">Community observation</option><option value="hdb_selection">Saw in HDB flat selection</option><option value="other">Other</option></select></label>
+            <label><span>Note</span><textarea id="quotaReportNote" maxlength="500" placeholder="Optional"></textarea></label>
+            <label><span>Evidence URL</span><input id="quotaReportEvidence" type="url" placeholder="Optional" /></label>
+          </div>
+        </details>
+        <button class="submit-report-btn" type="submit">Submit quota</button>
       </form>
 
       <form id="unitReportForm" class="report-flow" hidden>
-        <div class="chat-bubble bot">Select a unit and tell the community what you observed.</div>
-        <div class="two-inputs">
-          <label><span>Block</span><select id="unitReportBlock" required></select></label>
-          <label><span>Unit</span><select id="unitReportUnit" required></select></label>
+        <div id="unitReportSelectors" class="two-inputs">
+          <label id="unitBlockField"><span>Block</span><select id="unitReportBlock" required></select></label>
+          <label id="unitUnitField"><span>Unit</span><select id="unitReportUnit" required></select></label>
         </div>
         <div class="status-choice" role="group" aria-label="Reported unit status">
-          <label><input type="radio" name="unitReportStatus" value="available" required /><span>Available</span></label>
           <label><input type="radio" name="unitReportStatus" value="taken" required /><span>Taken</span></label>
+          <label><input type="radio" name="unitReportStatus" value="available" required /><span>Available</span></label>
         </div>
-        <div class="report-common-fields">
-          <label><span>Observed at</span><input id="unitReportObserved" type="datetime-local" required /></label>
-          <label><span>Source</span><select id="unitReportSource"><option value="hdb_selection">Saw in HDB flat selection</option><option value="community_observation">Community observation</option><option value="other">Other</option></select></label>
-          <label><span>Optional note</span><textarea id="unitReportNote" maxlength="500" placeholder="Anything useful for others to know"></textarea></label>
-          <label><span>Optional evidence URL</span><input id="unitReportEvidence" type="url" placeholder="https://…" /></label>
-        </div>
-        <button class="submit-report-btn" type="submit">Submit unit update</button>
+        <details class="report-more">
+          <summary>Add source or note</summary>
+          <div class="report-common-fields">
+            <label><span>Observed at</span><input id="unitReportObserved" type="datetime-local" required /></label>
+            <label><span>Source</span><select id="unitReportSource"><option value="community_observation">Community observation</option><option value="hdb_selection">Saw in HDB flat selection</option><option value="other">Other</option></select></label>
+            <label><span>Note</span><textarea id="unitReportNote" maxlength="500" placeholder="Optional"></textarea></label>
+            <label><span>Evidence URL</span><input id="unitReportEvidence" type="url" placeholder="Optional" /></label>
+          </div>
+        </details>
+        <button class="submit-report-btn" type="submit">Submit unit status</button>
       </form>
 
       <form id="progressReportForm" class="report-flow" hidden>
-        <div class="chat-bubble bot">Use the queue number whose appointment has already concluded, and cumulative dropouts to date.</div>
         <div class="two-inputs">
-          <label><span>Last queue reached</span><input id="progressReportQueue" type="number" min="0" required /></label>
-          <label><span>Total dropouts</span><input id="progressReportDropouts" type="number" min="0" required /></label>
+          <label><span>Last queue reached</span><input id="progressReportQueue" type="number" min="0" inputmode="numeric" required /></label>
+          <label><span>Total dropouts</span><input id="progressReportDropouts" type="number" min="0" inputmode="numeric" required /></label>
         </div>
-        <div class="report-common-fields">
-          <label><span>Observed at</span><input id="progressReportObserved" type="datetime-local" required /></label>
-          <label><span>Source</span><select id="progressReportSource"><option value="hdb_selection">HDB selection information</option><option value="appointment_group">Appointment / resident group</option><option value="community_observation">Community observation</option><option value="other">Other</option></select></label>
-          <label><span>Optional note</span><textarea id="progressReportNote" maxlength="500"></textarea></label>
-          <label><span>Optional evidence URL</span><input id="progressReportEvidence" type="url" placeholder="https://…" /></label>
-        </div>
-        <button class="submit-report-btn" type="submit">Submit progress update</button>
+        <p class="report-help">Use the queue number whose appointment has already ended, and cumulative dropouts to date.</p>
+        <details class="report-more">
+          <summary>Add source or note</summary>
+          <div class="report-common-fields">
+            <label><span>Observed at</span><input id="progressReportObserved" type="datetime-local" required /></label>
+            <label><span>Source</span><select id="progressReportSource"><option value="community_observation">Community observation</option><option value="hdb_selection">HDB selection information</option><option value="appointment_group">Appointment / resident group</option><option value="other">Other</option></select></label>
+            <label><span>Note</span><textarea id="progressReportNote" maxlength="500" placeholder="Optional"></textarea></label>
+            <label><span>Evidence URL</span><input id="progressReportEvidence" type="url" placeholder="Optional" /></label>
+          </div>
+        </details>
+        <button class="submit-report-btn" type="submit">Submit progress</button>
       </form>
 
       <div id="reportResult" class="report-result" hidden></div>
-      <div class="community-safety-note">Community data is not official HDB data. Matching reports increase confidence; conflicting reports are shown instead of silently overwriting one another.</div>
+      <div class="community-safety-note">Community-reported, not official HDB data. Conflicting reports are shown rather than overwritten.</div>
     </div>
   </aside>
   <div id="communityBackdrop" class="community-backdrop" hidden></div>
 
   <dialog id="featureDialog" class="feature-dialog">
     <button id="closeFeatureBtn" class="icon-btn dialog-close" type="button" aria-label="Close site feature">×</button>
-    <div class="eyebrow">SITE FEATURE</div>
+    <div class="eyebrow">AROUND BERLAYAR</div>
     <h2 id="featureTitle"></h2>
     <p id="featureDetail"></p>
-    <div class="feature-basis"><span>Evidence status</span><strong id="featureBasis"></strong></div>
+    <div class="feature-basis"><span>Reference</span><strong id="featureBasis"></strong></div>
     <div id="featureSourceLinks" class="feature-source-links"></div>
-    <p class="source-footnote">Existence / description is source-backed as stated above. Placement in the interactive model is an orientation sketch and is not a surveyed distance or construction footprint.</p>
+    <p class="source-footnote">Locations in the 3D view are approximate. Use the linked reference for the published plan.</p>
   </dialog>
 
   <dialog id="sourcesDialog" class="sources-dialog">
     <button id="closeSourcesBtn" class="icon-btn dialog-close" type="button" aria-label="Close sources">×</button>
     <div class="eyebrow">PUBLIC DATA SOURCES</div>
-    <h2>What the tracker is built from</h2>
+    <h2>References</h2>
     <div id="sourcesList" class="sources-list"></div>
-    <p class="source-footnote">V1.4.1 separates source-backed facts from schematic geometry and stores community observations in Supabase. Unit stack/type and residential-level data is reconciled against the public unit-distribution charts. 3D coordinates, paths and simplified building masses are orientation sketches, not HDB BIM/survey data. Live unit status comes only from community reports; unreported units remain untracked.</p>
+    <p class="source-footnote">Community status comes from resident reports. Unreported flats remain untracked. 3D positions are approximate; use the linked references for published plans.</p>
   </dialog>
 
   <script src="data/berlayar-data.js"></script>

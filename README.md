@@ -1,6 +1,18 @@
-# Berlayar Rise Community Flat Tracker — V1.4.1
+# Berlayar Rise Community Flat Tracker — V1.5.0
 
 A GitHub/Vercel-ready Berlayar Rise community tracker with a source-informed 3D estate view and shared reporting backed by Supabase.
+
+## What changed in V1.5.0
+
+- Simplified public-facing copy and removed implementation/debug wording from the main experience.
+- Reduced 3D block-label clutter. Desktop labels show the block and a compact taken count; mobile shows the block number only.
+- Added a two-tap unit workflow: tap a unit, then tap **Taken** or **Available** from the sticky quick-action bar.
+- Added **Details** as a secondary action instead of forcing the full unit dialog open on every tap.
+- Reworked the block drawer for phones: compact header, collapsible quota panel, horizontal filters, and a unit grid that can scroll vertically and horizontally.
+- Simplified the report panel so only the selected report type is shown.
+- Moved observed time, source, note and evidence into an optional **Add source or note** section.
+- Direct block/unit reporting now hides block/unit selectors when the current context is already known.
+- Community reporting/database rules are unchanged.
 
 ## What changed in V1.4.1
 
