@@ -1,0 +1,168 @@
+/* RiseBlock flat-type quota + queue progress add-on.
+   Loaded after styles.css so the rest of the current interface is untouched. */
+
+.community-progress.flat-group-v2 > .progress-metrics,
+.community-progress.flat-group-v2 > .progress-foot {
+  display: none;
+}
+
+.queue-progress-v2 {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.flat-group-tabs {
+  display: flex;
+  gap: 0;
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.flat-group-tab {
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.flat-group-tab:last-child {
+  border-right: 0;
+}
+
+.flat-group-tab:hover:not(:disabled) {
+  background: rgba(216,240,158,.08);
+  color: var(--text);
+}
+
+.flat-group-tab.active {
+  background: var(--accent);
+  color: #0b1713;
+}
+
+.flat-group-tab:disabled {
+  opacity: .32;
+  cursor: not-allowed;
+}
+
+.queue-v2-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(116px, 1fr));
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.queue-v2-metrics > div {
+  min-width: 116px;
+  padding: 12px 12px;
+  border-right: 1px solid var(--line);
+}
+
+.queue-v2-metrics > div:last-child {
+  border-right: 0;
+}
+
+.queue-v2-metrics span {
+  display: block;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.queue-v2-metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 19px;
+}
+
+.queue-v2-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.queue-v2-foot #queueV2Recorded {
+  color: #91aa9d;
+}
+
+.queue-v2-foot #reportProgressBtn {
+  margin-left: auto;
+}
+
+#quotaCard.quota-v2-ready #quotaCardBody > #quotaEmpty,
+#quotaCard.quota-v2-ready #quotaCardBody > #quotaValues,
+#quotaCard.quota-v2-ready #quotaCardBody > .quota-meta:not(.quota-v2-meta) {
+  display: none !important;
+}
+
+.quota-v2-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 11px;
+}
+
+.quota-group-tabs {
+  width: 100%;
+}
+
+.quota-group-tabs .flat-group-tab {
+  flex: 1 1 0;
+}
+
+.quota-v2-panel .quota-empty,
+.quota-v2-panel .quota-values,
+.quota-v2-panel .quota-meta {
+  margin-top: 0;
+}
+
+.report-inline-help {
+  display: block;
+  min-height: 13px;
+  color: #789287;
+  font-size: 9px;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (max-width: 980px) {
+  .queue-progress-v2 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 660px) {
+  .flat-group-tabs {
+    width: 100%;
+  }
+
+  .flat-group-tab {
+    flex: 1 1 0;
+    padding-inline: 7px;
+  }
+
+  .queue-v2-metrics {
+    grid-template-columns: repeat(5, minmax(122px, 1fr));
+  }
+
+  .queue-v2-foot #reportProgressBtn {
+    margin-left: 0;
+    width: 100%;
+    text-align: left;
+  }
+}
