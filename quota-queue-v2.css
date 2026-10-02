@@ -333,3 +333,31 @@
     z-index: 6;
   }
 }
+
+
+/* Mobile overlap treatment:
+   block pointers remain visible, but become visually subdued when they overlap
+   the Explore the precinct card. */
+@media (max-width: 660px) {
+  .project-card {
+    z-index: 5;
+  }
+
+  .block-label {
+    z-index: 6;
+    transition:
+      opacity .18s ease,
+      filter .18s ease,
+      transform .18s ease;
+  }
+
+  .layers {
+    z-index: 7;
+  }
+
+  .block-label.over-project-card {
+    opacity: .4;
+    filter: blur(2px);
+    pointer-events: none;
+  }
+}

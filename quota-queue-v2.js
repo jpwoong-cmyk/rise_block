@@ -500,6 +500,41 @@
     }
   }
 
+  let blockLabelCollisionFrame = null;
+
+  function startMobileBlockLabelCollision() {
+    if (blockLabelCollisionFrame) return;
+
+    const tick = () => {
+      const mobile = window.matchMedia('(max-width: 660px)').matches;
+      const card = document.querySelector('.project-card');
+      const labels = document.querySelectorAll('.block-label');
+
+      if (!mobile || !card || document.visibilityState !== 'visible') {
+        labels.forEach(label => label.classList.remove('over-project-card'));
+        blockLabelCollisionFrame = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      const cardRect = card.getBoundingClientRect();
+
+      labels.forEach(label => {
+        const rect = label.getBoundingClientRect();
+        const overlaps =
+          rect.right > cardRect.left &&
+          rect.left < cardRect.right &&
+          rect.bottom > cardRect.top &&
+          rect.top < cardRect.bottom;
+
+        label.classList.toggle('over-project-card', overlaps);
+      });
+
+      blockLabelCollisionFrame = window.requestAnimationFrame(tick);
+    };
+
+    blockLabelCollisionFrame = window.requestAnimationFrame(tick);
+  }
+
   function injectActivityUi() {
     if ($('projectLastUpdate')) return;
 
@@ -734,6 +769,7 @@
   injectQueueUi();
   injectQuotaUi();
   injectActivityUi();
+  startMobileBlockLabelCollision();
   injectReportFields();
   attachSubmissionOverrides();
   await connect();
