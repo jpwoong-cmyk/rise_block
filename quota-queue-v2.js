@@ -22,6 +22,8 @@
   let activeQueueGroup = '2R';
   let activeQuotaGroup = '2R';
   let dataReady = false;
+  let activityRows = [];
+  let activityRefreshTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -422,6 +424,7 @@
           activeQuotaGroup = groupKey;
           setReportResult(`${GROUP_LABEL[groupKey]} quota submitted for Block ${blockCode}.`);
           await refreshV2Data();
+          await refreshActivity();
         } catch (error) {
           console.error('Quota V2 submission failed:', error);
           setReportResult(error?.message || 'Could not submit the block quota.', false);
@@ -472,6 +475,7 @@
           activeQueueGroup = groupKey;
           setReportResult(`${GROUP_LABEL[groupKey]} queue progress submitted.`);
           await refreshV2Data();
+          await refreshActivity();
         } catch (error) {
           console.error('Queue V2 submission failed:', error);
           setReportResult(error?.message || 'Could not submit queue progress.', false);
@@ -480,6 +484,181 @@
         }
       }, true);
     }
+  }
+
+
+  function injectActivityUi() {
+    if ($('projectLastUpdate')) return;
+
+    const card = document.querySelector('.project-card');
+    const tags = card?.querySelector('.project-tags');
+    if (!card || !tags) return;
+
+    const lastUpdate = document.createElement('div');
+    lastUpdate.id = 'projectLastUpdate';
+    lastUpdate.className = 'project-last-update';
+    lastUpdate.innerHTML = `
+      <div class="project-last-update-copy">
+        <span>LAST UPDATE</span>
+        <strong id="projectLastUpdateValue">Loading…</strong>
+      </div>
+      <button id="activityLogBtn" class="activity-help-btn" type="button"
+              aria-label="View community update log" title="View update log">?</button>
+    `;
+    tags.insertAdjacentElement('afterend', lastUpdate);
+
+    const dialog = document.createElement('dialog');
+    dialog.id = 'activityLogDialog';
+    dialog.className = 'activity-log-dialog';
+    dialog.innerHTML = `
+      <button id="closeActivityLogBtn" class="icon-btn dialog-close" type="button" aria-label="Close update log">×</button>
+      <div class="eyebrow">COMMUNITY ACTIVITY</div>
+      <h2>Recent updates</h2>
+      <p class="activity-log-intro">High-level tracker changes only. Reporter identities are not shown.</p>
+      <div id="activityLogList" class="activity-log-list" aria-live="polite"></div>
+      <div class="activity-log-foot">Times shown in Singapore time.</div>
+    `;
+    document.body.appendChild(dialog);
+
+    $('activityLogBtn')?.addEventListener('click', async () => {
+      try {
+        await refreshActivity();
+      } catch (error) {
+        console.error('Activity log refresh failed:', error);
+      }
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    });
+
+    $('closeActivityLogBtn')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+
+  function activityMinuteKey(value) {
+    if (!value) return '';
+    return new Date(value).toISOString().slice(0, 16);
+  }
+
+  function groupActivity(rows) {
+    const grouped = [];
+    const byMinute = new Map();
+
+    for (const row of rows) {
+      const key = activityMinuteKey(row.event_at);
+      let group = byMinute.get(key);
+      if (!group) {
+        group = { event_at: row.event_at, activities: [] };
+        byMinute.set(key, group);
+        grouped.push(group);
+      }
+      if (row.activity_text && !group.activities.includes(row.activity_text)) {
+        group.activities.push(row.activity_text);
+      }
+    }
+    return grouped;
+  }
+
+  function renderActivity() {
+    const lastUpdateValue = $('projectLastUpdateValue');
+    const list = $('activityLogList');
+
+    if (lastUpdateValue) {
+      lastUpdateValue.textContent = activityRows.length
+        ? readableDate(activityRows[0].event_at)
+        : 'No updates yet';
+    }
+
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (!activityRows.length) {
+      const empty = document.createElement('div');
+      empty.className = 'activity-log-empty';
+      empty.textContent = 'No community changes have been recorded yet.';
+      list.appendChild(empty);
+      return;
+    }
+
+    for (const group of groupActivity(activityRows)) {
+      const row = document.createElement('div');
+      row.className = 'activity-log-row';
+
+      const time = document.createElement('time');
+      time.dateTime = group.event_at;
+      time.textContent = readableDate(group.event_at);
+
+      const changes = document.createElement('div');
+      changes.className = 'activity-log-changes';
+
+      group.activities.forEach((activity, index) => {
+        if (index) {
+          const separator = document.createElement('span');
+          separator.className = 'activity-log-separator';
+          separator.textContent = '|';
+          changes.appendChild(separator);
+        }
+        const item = document.createElement('span');
+        item.textContent = activity;
+        changes.appendChild(item);
+      });
+
+      row.append(time, changes);
+      list.appendChild(row);
+    }
+  }
+
+  async function refreshActivity() {
+    if (!client) return;
+
+    const { data, error } = await client
+      .from('activity_log')
+      .select('event_at,activity_type,block_code,flat_group,activity_text')
+      .order('event_at', { ascending: false })
+      .limit(80);
+
+    if (error) throw error;
+    activityRows = data || [];
+    renderActivity();
+  }
+
+  function startActivityRefresh() {
+    if (activityRefreshTimer) return;
+
+    activityRefreshTimer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      refreshActivity().catch(error => console.error('Activity auto-refresh failed:', error));
+    }, 15000);
+
+    window.addEventListener('focus', () => {
+      refreshActivity().catch(error => console.error('Activity focus refresh failed:', error));
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshActivity().catch(error => console.error('Activity visibility refresh failed:', error));
+      }
+    });
+
+    // Existing unit and bulk update flows live in app.js. Refresh shortly after
+    // those interactions so this add-on updates without changing app.js.
+    document.addEventListener('submit', event => {
+      const id = event.target?.id;
+      if (id === 'unitReportForm') {
+        window.setTimeout(() => refreshActivity().catch(() => {}), 1400);
+      }
+    });
+
+    document.addEventListener('click', event => {
+      const id = event.target?.closest?.('button')?.id;
+      if (id === 'quickTakenBtn' || id === 'quickAvailableBtn') {
+        window.setTimeout(() => refreshActivity().catch(() => {}), 1400);
+      }
+      if (id === 'bulkSubmitBtn') {
+        window.setTimeout(() => refreshActivity().catch(() => {}), 3500);
+      }
+    });
   }
 
   async function refreshV2Data() {
@@ -520,6 +699,8 @@
         db: { schema: CFG.schema || 'riseblock' }
       });
       await refreshV2Data();
+      await refreshActivity();
+      startActivityRefresh();
     } catch (error) {
       console.error('Quota/queue V2 connection failed:', error);
       if ($('queueV2Meta')) $('queueV2Meta').textContent = 'Quota/queue updates are temporarily unavailable.';
@@ -529,6 +710,7 @@
 
   injectQueueUi();
   injectQuotaUi();
+  injectActivityUi();
   injectReportFields();
   attachSubmissionOverrides();
   await connect();
