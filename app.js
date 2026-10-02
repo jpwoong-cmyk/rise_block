@@ -1,7 +1,6 @@
 (async function initialiseBerlayarTracker() {
   const sceneHost = document.getElementById('scene');
   const loadingEl = document.getElementById('sceneLoading');
-  const sceneSurroundingsHost = document.getElementById('sceneSurroundings');
   const DATA = window.BERLAYAR_DATA;
 
   if (!DATA) {
@@ -1306,8 +1305,8 @@
     let unitHighlight = null;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x091511);
-    scene.fog = new THREE.Fog(0x091511, 66, 124);
+    scene.background = new THREE.Color(0x0a1713);
+    scene.fog = new THREE.Fog(0x0a1713, 64, 116);
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 220);
     camera.position.set(43, 48, 57);
@@ -1322,9 +1321,8 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = .065;
-    controls.enablePan = false;
     controls.minDistance = 19;
-    controls.maxDistance = 116;
+    controls.maxDistance = 110;
     controls.maxPolarAngle = Math.PI*.49;
     controls.target.set(-1,3,1);
 
@@ -1337,65 +1335,10 @@
     scene.add(sun);
 
     const ground = new THREE.Mesh(
-      new THREE.BoxGeometry(102,1.15,96),
-      new THREE.MeshStandardMaterial({color:0x445d4b,roughness:.98})
+      new THREE.BoxGeometry(66,1.15,61),
+      new THREE.MeshStandardMaterial({color:0x49624f,roughness:.98})
     );
     ground.position.set(-1,-.68,1.5); ground.receiveShadow=true; scene.add(ground);
-
-    // Wider context ground so the estate no longer appears to float inside a black void.
-    function addContextPatch(x,z,w,d,color,opacity=.88,rotation=0,y=.02){
-      const patch = new THREE.Mesh(
-        new THREE.BoxGeometry(w,.08,d),
-        new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity})
-      );
-      patch.position.set(x,y,z);
-      patch.rotation.y = rotation;
-      patch.receiveShadow = true;
-      scene.add(patch);
-      contextObjects.push(patch);
-      return patch;
-    }
-
-    function addContextEllipse(x,z,rx,rz,color,opacity=.82,rotation=0){
-      const geo = new THREE.CylinderGeometry(1,1,.06,40);
-      geo.scale(rx,1,rz);
-      const mesh = new THREE.Mesh(
-        geo,
-        new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity})
-      );
-      mesh.position.set(x,.03,z);
-      mesh.rotation.y = rotation;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      contextObjects.push(mesh);
-      return mesh;
-    }
-
-    function addMiniHill(x,z,rx,rz,height,color=0x4a7054){
-      const mesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.0,1.18,height,24),
-        new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity:.78})
-      );
-      mesh.scale.set(rx,height>1.4?1:0.9,rz);
-      mesh.position.set(x,height*.5-.02,z);
-      scene.add(mesh);
-      contextObjects.push(mesh);
-      return mesh;
-    }
-
-    // Schematic outer surroundings for visual context only.
-    addContextPatch(-40,-24,26,19,0x496a4d,.78,-0.12);   // NW greenery
-    addContextPatch(-39,2,11,48,0x476e67,.72,0.04);      // Berlayar Creek / green edge
-    addContextPatch(32,2,20,36,0x646d64,.62,-0.04);      // East urban band
-    addContextPatch(21,35,50,20,0x2f6276,.56,0.02);      // South / harbour-waterfront band
-    addContextPatch(-15,36,30,12,0x60785f,.66,0.01);     // South green / park band
-    addContextEllipse(26,-29,18,9,0x55765d,.66,0.15);    // North-east hill park mass
-    addContextEllipse(-18,-31,16,7,0x638265,.58,-0.14);  // North-west green mass
-    addContextEllipse(28,33,16,6,0x3b7182,.42,0.10);     // soft harbour glint
-
-    addMiniHill(20,-31,4.8,2.7,1.6,0x54775a);
-    addMiniHill(27,-27,3.4,2.3,1.25,0x577f60);
-    addMiniHill(-18,-29,3.8,2.2,1.1,0x6a896c);
 
     function addParcel(x,z,w,d,color,featureId=null) {
       const p = new THREE.Mesh(new THREE.BoxGeometry(w,.08,d), new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity:.72}));
@@ -1647,26 +1590,6 @@
     const roadLabelEls=[];
     roadLabels.forEach(r=>{const el=document.createElement('div');el.className='road-label';el.textContent=r.text;sceneHost.appendChild(el);roadLabelEls.push({el,...r});});
 
-    // Surrounding scenery labels are static context cues only. They are not clickable
-    // and do not change the camera target.
-    const surroundingLandmarks = [
-      { id:'sur-hills', text:'Mount Faber / Telok Blangah Hill', sub:'green / hill-park direction', x:22, z:-33, y:1.2, tone:'hills' },
-      { id:'sur-town', text:'Telok Blangah MRT', sub:'front edge of the estate', x:-2, z:-36, y:1.1, tone:'urban' },
-      { id:'sur-creek', text:'Berlayar Creek', sub:'west-side green edge', x:-41, z:1, y:1.0, tone:'creek' },
-      { id:'sur-water', text:'Waterfront / harbour', sub:'southern coastal direction', x:20, z:35, y:1.0, tone:'water' },
-      { id:'sur-east', text:'Surrounding neighbourhood', sub:'adjacent / future residential context', x:35, z:7, y:1.0, tone:'urban' }
-    ];
-    const surroundingLabelEls = [];
-    if (sceneSurroundingsHost) {
-      surroundingLandmarks.forEach(item => {
-        const el = document.createElement('div');
-        el.className = `surrounding-label ${item.tone}`;
-        el.innerHTML = `<strong>${item.text}</strong><span>${item.sub}</span>`;
-        sceneSurroundingsHost.appendChild(el);
-        surroundingLabelEls.push({ el, ...item });
-      });
-    }
-
     function resize(){const r=sceneHost.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}
     window.addEventListener('resize',resize); resize();
 
@@ -1675,12 +1598,6 @@
       for(const block of DATA.blocks){const p=screenPosition(block.model.x,block.storeys*floorHeight+1.7,block.model.z);const el=labels.get(block.id);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       for(const feature of allLabelFeatures){const el=featureLabels.get(feature.id);if(!el)continue;const p=screenPosition(feature.x,(feature.height||.5)+1,feature.z);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       roadLabelEls.forEach(r=>{const p=screenPosition(r.x,.25,r.z);r.el.style.left=`${p.x}px`;r.el.style.top=`${p.y}px`;r.el.style.display=p.behind?'none':'';});
-      surroundingLabelEls.forEach(item=>{
-        const p=screenPosition(item.x,item.y,item.z);
-        item.el.style.left=`${p.x}px`;
-        item.el.style.top=`${p.y}px`;
-        item.el.style.display=p.behind?'none':'';
-      });
     }
 
     function animate(t){
@@ -1803,10 +1720,6 @@
     document.getElementById('layerContext').addEventListener('change',e=>{
       setLayer(contextObjects,e.target.checked);
       for(const [id,el] of featureLabels){const f=allLabelFeatures.find(x=>x.id===id);if(f && (f.category==='context'||f.category==='transport'))el.classList.toggle('layer-hidden',!e.target.checked);}
-      surroundingLabelEls.forEach(item=>item.el.classList.toggle('layer-hidden',!e.target.checked));
-      document.querySelector('.scene-context-backdrop')?.classList.toggle('is-hidden', !e.target.checked);
-      document.querySelector('.surroundings-card')?.classList.toggle('is-muted', !e.target.checked);
-      document.querySelector('.scene-edge-hints')?.classList.toggle('is-muted', !e.target.checked);
     });
 
   } catch(error) {
@@ -1824,10 +1737,6 @@
         <button class="fallback-block b204b" data-block="204B">204B</button>
         <button class="fallback-feature preschool" data-feature="preschool">3-storey preschool</button>
         <button class="fallback-feature mscp" data-feature="mscp">203 MSCP + roof garden</button>
-        <div class="fallback-context-tag hills">Mount Faber / hill parks</div>
-        <div class="fallback-context-tag creek">Berlayar Creek / green edge</div>
-        <div class="fallback-context-tag water">Waterfront / harbour</div>
-        <div class="fallback-context-tag urban">Surrounding urban area</div>
         <div class="fallback-warning"><strong>3D library could not load.</strong><span>You can still select blocks and flats from this map.</span></div>
       </div>`;
     sceneHost.querySelectorAll('[data-block]').forEach(el=>el.addEventListener('click',()=>{const b=DATA.blocks.find(x=>x.id===el.dataset.block);if(b)openBlock(b);}));
