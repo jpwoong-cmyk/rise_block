@@ -1,23 +1,26 @@
-RiseBlock - Sun Study update
+RiseBlock - compact Sun Study + stack towers
 
-Replace ONLY:
+Replace:
 - app.js
 - styles.css
 
 No index.html change.
 No Supabase migration.
-No new JS/CSS files.
+No extra JS/CSS files.
 
-What is included:
-- Sun Study toggle added to existing Map Layers.
-- Date picker and draggable 6:00 AM-8:00 PM time slider.
-- Morning 9 AM, Afternoon 1 PM, Evening 5 PM shortcuts.
-- Solar azimuth/elevation calculated client-side for Berlayar Rise.
-- Existing Three.js directional light now follows the calculated sun.
-- Existing building shadows move with time.
-- Dynamic N/E/S/W compass follows the rotated 3D view.
-- Sunrise/sunset readout.
-- Selected flats show North/South-facing exposure using stack orientation transcribed from the HDB site plan.
+Changes:
+1. Sun Study is always available. No on/off toggle.
+2. Compact left-side vertical drag control.
+3. 30% translucent blurred glass.
+4. Default time is 12:00 PM.
+5. Date remains changeable through the compact date control.
+6. Compass is integrated into the same narrow rail.
+7. Residential towers are split into 8 clickable stack columns using the four two-flat wing arrangement shown in the HDB floor/site plans.
+8. Hovering a stack shows its stack number, flat type and N/S facade.
+9. Clicking a stack opens the existing block drawer focused on that stack.
+10. The all-floors table highlights the focused stack column.
+11. Flat-type filtering now fades non-matching stack columns instead of fading the whole block.
+12. Unit highlight now lands on the selected stack tower.
 
-Accuracy:
-The sun position is astronomical/indicative. The current 3D towers are schematic rather than BIM geometry, so shadow and facade exposure should be treated as a planning aid, not a professional solar simulation.
+Note:
+Stack tower massing is still schematic. The stack grouping/order and N/S facade are based on the HDB plans, but the 3D dimensions are not BIM geometry.

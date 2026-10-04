@@ -189,6 +189,7 @@
   let selectedBlock = null;
   let selectedUnit = null;
   let selectedFloor = null;
+  let selectedStackFocus = null;
   let selectorView = 'all';
 
   const levelViewBtn = document.getElementById('levelViewBtn');
@@ -1239,9 +1240,10 @@
     return parts.join(' · ');
   }
 
-  function openBlock(block) {
+  function openBlock(block, stackFocus = null) {
     selectedBlock = block;
     selectedUnit = null;
+    selectedStackFocus = stackFocus;
     const floors = residentialFloors(block);
     selectedFloor = floors.length ? floors[floors.length - 1] : null;
     setSelectorView('all');
@@ -1251,7 +1253,10 @@
     const subset = blockUnits(block.id);
     const c = statusCounts(subset);
     document.getElementById('drawerBlockName').textContent = block.id;
-    document.getElementById('drawerBlockMeta').textContent = `${block.total.toLocaleString()} flats · ${block.storeys} storeys`;
+    const focusedStack = stackFocus ? block.stacks.find(s => s.no === stackFocus) : null;
+    document.getElementById('drawerBlockMeta').textContent = focusedStack
+      ? `Stack ${focusedStack.no} · ${typeLabel(focusedStack.type)} · ${block.storeys} storeys`
+      : `${block.total.toLocaleString()} flats · ${block.storeys} storeys`;
     document.getElementById('drawerGroundMeta').textContent = '';
     document.getElementById('drawerSpecialMeta').textContent = '';
     document.getElementById('drawerAvailable').textContent = availableCount(c).toLocaleString();
@@ -1407,7 +1412,7 @@
     const statusFilter = document.getElementById('drawerStatusFilter').value;
     const head = document.getElementById('unitTableHead');
     const body = document.getElementById('unitTableBody');
-    head.innerHTML = `<tr><th class="floor-head">Level</th>${selectedBlock.stacks.map(s=>`<th><span>${s.no}</span><br><small>${typeLabel(s.type).replace('2-Room Flexi ','')}</small></th>`).join('')}</tr>`;
+    head.innerHTML = `<tr><th class="floor-head">Level</th>${selectedBlock.stacks.map(s=>`<th class="${selectedStackFocus === s.no ? 'stack-focus-head' : ''}"><span>${s.no}</span><br><small>${typeLabel(s.type).replace('2-Room Flexi ','')}</small></th>`).join('')}</tr>`;
     body.innerHTML = '';
 
     const byKey = new Map(blockUnits(selectedBlock.id).map(u=>[`${u.floor}-${u.stack}`,u]));
@@ -1437,6 +1442,7 @@
       for (const stack of selectedBlock.stacks) {
         const u = byKey.get(`${level}-${stack.no}`);
         const td = document.createElement('td');
+        if (selectedStackFocus === stack.no) td.classList.add('stack-focus-cell');
         if (!u) {
           td.innerHTML = '<span class="unit-empty">—</span>';
           tr.appendChild(td);
@@ -1473,6 +1479,7 @@
   function selectUnitForQuickAction(u) {
     selectedUnit = u;
     selectedFloor = u.floor;
+    selectedStackFocus = u.stack;
     quickUnitFeedback.textContent = '';
     updateQuickUnitBar();
     renderUnitGrid();
@@ -1676,6 +1683,7 @@
     const blockMeshes = [];
     const featureMeshes = [];
     const blockGroups = new Map();
+    const stackMeshByKey = new Map();
     const amenityObjects = [];
     const linkObjects = [];
     const contextObjects = [];
@@ -1718,14 +1726,13 @@
     scene.add(sun.target);
     scene.add(sun);
 
-    // ---------- Sun study ----------
-    // Site north follows the HDB site plan: -Z = north, +X = east.
+    // ---------- Sun study + stack plan ----------
+    // Site north follows the published HDB site plan: -Z = north, +X = east.
     // Solar position uses an in-browser NOAA approximation for Berlayar Rise.
     const SUN_STUDY_LAT = 1.26927;
     const SUN_STUDY_LON = 103.8091;
     const SUN_STUDY_TZ = 8;
     const SUN_STUDY_RADIUS = 72;
-    const sceneShell = sceneHost.closest('.scene-shell');
 
     const stackFacing = new Map(Object.entries({
       '200A': { '113':'N','115':'N','101':'N','103':'N','111':'S','109':'S','107':'S','105':'S' },
@@ -1734,6 +1741,17 @@
       '201B': { '153':'N','155':'N','157':'N','159':'N','151':'S','149':'S','163':'S','161':'S' },
       '204A': { '104':'N','106':'N','108':'N','110':'N','102':'S','100':'S','114':'S','112':'S' },
       '204B': { '120':'N','122':'N','124':'N','126':'N','118':'S','116':'S','130':'S','128':'S' }
+    }));
+
+    // Four two-flat wings, transcribed from the HDB floor/site plans.
+    // Coordinates below are intentionally schematic massing positions, not BIM geometry.
+    const stackPlan = new Map(Object.entries({
+      '200A': [['113','115'],['101','103'],['111','109'],['107','105']],
+      '200B': [['129','131'],['117','119'],['127','125'],['123','121']],
+      '201A': [['145','147'],['133','135'],['143','141'],['139','137']],
+      '201B': [['153','155'],['157','159'],['151','149'],['163','161']],
+      '204A': [['104','106'],['108','110'],['102','100'],['114','112']],
+      '204B': [['120','122'],['124','126'],['118','116'],['130','128']]
     }));
 
     function singaporeDateValue() {
@@ -1750,10 +1768,9 @@
     }
 
     const sunStudy = {
-      enabled:false,
       date:singaporeDateValue(),
-      minutes:13*60,
-      lastCompassKey:''
+      minutes:12*60,
+      lastSelectionKey:''
     };
 
     function dayOfYear(dateValue) {
@@ -1795,29 +1812,7 @@
         ) + 180 + 360
       ) % 360;
 
-      return { elevation, azimuth, declination:THREE.MathUtils.radToDeg(decl), eqTime };
-    }
-
-    function solarDayWindow(dateValue) {
-      const doy = dayOfYear(dateValue);
-      const gamma = (2*Math.PI/365) * (doy - 1);
-      const eqTime = 229.18 * (
-        0.000075 + 0.001868*Math.cos(gamma) - 0.032077*Math.sin(gamma)
-        - 0.014615*Math.cos(2*gamma) - 0.040849*Math.sin(2*gamma)
-      );
-      const decl =
-        0.006918 - 0.399912*Math.cos(gamma) + 0.070257*Math.sin(gamma)
-        - 0.006758*Math.cos(2*gamma) + 0.000907*Math.sin(2*gamma)
-        - 0.002697*Math.cos(3*gamma) + 0.00148*Math.sin(3*gamma);
-      const lat = THREE.MathUtils.degToRad(SUN_STUDY_LAT);
-      const zenith = THREE.MathUtils.degToRad(90.833);
-      const cosHa = THREE.MathUtils.clamp(
-        Math.cos(zenith)/(Math.cos(lat)*Math.cos(decl)) - Math.tan(lat)*Math.tan(decl),
-        -1, 1
-      );
-      const ha = THREE.MathUtils.radToDeg(Math.acos(cosHa));
-      const solarNoon = 720 - 4*SUN_STUDY_LON - eqTime + SUN_STUDY_TZ*60;
-      return { sunrise:solarNoon - 4*ha, sunset:solarNoon + 4*ha, solarNoon };
+      return { elevation, azimuth };
     }
 
     function formatClock(minutes) {
@@ -1827,6 +1822,11 @@
       const suffix = h24 >= 12 ? 'PM' : 'AM';
       const h12 = h24%12 || 12;
       return `${h12}:${String(mm).padStart(2,'0')} ${suffix}`;
+    }
+
+    function formatSunDate(dateValue) {
+      const [y,m,d] = dateValue.split('-').map(Number);
+      return new Intl.DateTimeFormat('en-SG',{day:'2-digit',month:'short'}).format(new Date(Date.UTC(y,m-1,d))).toUpperCase();
     }
 
     function sunDirection(azimuth) {
@@ -1839,81 +1839,55 @@
       const faceAzimuth = facing === 'N' ? 0 : 180;
       const delta = THREE.MathUtils.degToRad((((solar.azimuth-faceAzimuth)+540)%360)-180);
       const score = Math.max(0, Math.cos(THREE.MathUtils.degToRad(solar.elevation))*Math.cos(delta));
-      if (score >= .55) return { label:'Strong direct sun', level:'high' };
-      if (score >= .22) return { label:'Some direct sun', level:'medium' };
-      if (score >= .04) return { label:'Low-angle direct sun', level:'low' };
-      return { label:'No direct facade sun', level:'none' };
+      if (score >= .55) return { label:'strong direct sun', level:'high' };
+      if (score >= .22) return { label:'some direct sun', level:'medium' };
+      if (score >= .04) return { label:'low-angle sun', level:'low' };
+      return { label:'no direct facade sun', level:'none' };
     }
 
-    const layersPanel = document.querySelector('.layers');
-    const sunLayerLabel = document.createElement('label');
-    sunLayerLabel.className = 'sun-study-layer-toggle';
-    sunLayerLabel.innerHTML = '<input type="checkbox" id="layerSunStudy" /> <span>Sun study</span>';
-    layersPanel?.appendChild(sunLayerLabel);
-
     const sunPanel = document.createElement('section');
-    sunPanel.className = 'sun-study-panel glass';
-    sunPanel.hidden = true;
-    sunPanel.setAttribute('aria-label','Sun study controls');
+    sunPanel.className = 'sun-study-rail';
+    sunPanel.setAttribute('aria-label','Sun study time control');
     sunPanel.innerHTML = `
-      <div class="sun-study-head">
-        <div>
-          <span class="sun-study-kicker">SUN STUDY</span>
-          <strong id="sunStudyTime">1:00 PM</strong>
+      <span class="sun-study-kicker">SUN</span>
+      <strong id="sunStudyTime">12:00 PM</strong>
+      <span id="sunStudyPosition">S · 0°</span>
+
+      <div class="sun-study-vertical">
+        <span>8P</span>
+        <input id="sunStudySlider" type="range" min="360" max="1200" step="10" value="720" aria-label="Time of day" />
+        <span>6A</span>
+      </div>
+
+      <label class="sun-study-date-control" title="Change sun-study date">
+        <span id="sunStudyDateText">${formatSunDate(sunStudy.date)}</span>
+        <input id="sunStudyDate" type="date" value="${sunStudy.date}" aria-label="Sun study date" />
+      </label>
+
+      <div class="sun-compass" aria-label="Site compass">
+        <div class="sun-compass-ring" aria-hidden="true">
+          <span data-cardinal="N">N</span>
+          <span data-cardinal="E">E</span>
+          <span data-cardinal="S">S</span>
+          <span data-cardinal="W">W</span>
+          <i></i>
         </div>
-        <div class="sun-study-position">
-          <b id="sunStudyDirection">S</b>
-          <span id="sunStudyElevation">Sun 0° high</span>
-        </div>
-      </div>
-      <div class="sun-study-presets" role="group" aria-label="Time presets">
-        <button type="button" data-sun-minutes="540">Morning <small>9 AM</small></button>
-        <button type="button" data-sun-minutes="780" class="active">Afternoon <small>1 PM</small></button>
-        <button type="button" data-sun-minutes="1020">Evening <small>5 PM</small></button>
-      </div>
-      <div class="sun-study-slider-row">
-        <span id="sunStudySunrise">Sunrise</span>
-        <input id="sunStudySlider" type="range" min="360" max="1200" step="10" value="780" aria-label="Time of day" />
-        <span id="sunStudySunset">Sunset</span>
-      </div>
-      <div class="sun-study-foot">
-        <label>Date <input id="sunStudyDate" type="date" value="${sunStudy.date}" /></label>
-        <span id="sunStudySelected">Drag time to move the sun and shadows.</span>
       </div>
     `;
     sceneHost.appendChild(sunPanel);
 
-    const compass = document.createElement('div');
-    compass.className = 'sun-compass glass';
-    compass.hidden = true;
-    compass.setAttribute('aria-label','Site compass');
-    compass.innerHTML = `
-      <div class="sun-compass-ring" aria-hidden="true">
-        <span data-cardinal="N">N</span>
-        <span data-cardinal="E">E</span>
-        <span data-cardinal="S">S</span>
-        <span data-cardinal="W">W</span>
-        <i></i>
-      </div>
-      <small>SITE</small>
-    `;
-    sceneHost.appendChild(compass);
+    const compass = sunPanel.querySelector('.sun-compass');
     const sunCompassLabels = new Map(
       [...compass.querySelectorAll('[data-cardinal]')].map(el => [el.dataset.cardinal,el])
     );
-
     const sunSlider = sunPanel.querySelector('#sunStudySlider');
     const sunDateInput = sunPanel.querySelector('#sunStudyDate');
+    const sunDateText = sunPanel.querySelector('#sunStudyDateText');
     const sunTimeEl = sunPanel.querySelector('#sunStudyTime');
-    const sunDirectionEl = sunPanel.querySelector('#sunStudyDirection');
-    const sunElevationEl = sunPanel.querySelector('#sunStudyElevation');
-    const sunSunriseEl = sunPanel.querySelector('#sunStudySunrise');
-    const sunSunsetEl = sunPanel.querySelector('#sunStudySunset');
-    const sunSelectedEl = sunPanel.querySelector('#sunStudySelected');
+    const sunPositionEl = sunPanel.querySelector('#sunStudyPosition');
 
     function updateSunStudy() {
       const solar = solarData(sunStudy.date, sunStudy.minutes);
-      const window = solarDayWindow(sunStudy.date);
       const elevationRad = THREE.MathUtils.degToRad(Math.max(-4, solar.elevation));
       const azimuthRad = THREE.MathUtils.degToRad(solar.azimuth);
       const horizontal = Math.cos(elevationRad) * SUN_STUDY_RADIUS;
@@ -1926,61 +1900,31 @@
       sun.target.position.set(-1,0,1.5);
 
       const daylight = THREE.MathUtils.clamp((solar.elevation + 4) / 22, 0, 1);
-      sun.intensity = sunStudy.enabled ? 0.08 + daylight*3.35 : 3.0;
-      skyLight.intensity = sunStudy.enabled ? 0.72 + daylight*1.55 : 2.45;
+      sun.intensity = 0.08 + daylight*3.35;
+      skyLight.intensity = 0.72 + daylight*1.55;
 
-      if (sunStudy.enabled) {
-        const nightMix = 1 - daylight;
-        scene.background.setRGB(
-          0.039 + 0.010*(1-nightMix),
-          0.082 + 0.020*(1-nightMix),
-          0.068 + 0.014*(1-nightMix)
-        );
-        scene.fog.color.copy(scene.background);
-      } else {
-        scene.background.set(0x0a1713);
-        scene.fog.color.set(0x0a1713);
-      }
+      const nightMix = 1 - daylight;
+      scene.background.setRGB(
+        0.039 + 0.010*(1-nightMix),
+        0.082 + 0.020*(1-nightMix),
+        0.068 + 0.014*(1-nightMix)
+      );
+      scene.fog.color.copy(scene.background);
 
       sunTimeEl.textContent = formatClock(sunStudy.minutes);
-      sunDirectionEl.textContent = solar.elevation > 0 ? sunDirection(solar.azimuth) : '—';
-      sunElevationEl.textContent = solar.elevation > 0
-        ? `Sun ${Math.round(solar.elevation)}° high · ${Math.round(solar.azimuth)}° azimuth`
-        : 'Sun below the horizon';
-      sunSunriseEl.textContent = `↑ ${formatClock(window.sunrise)}`;
-      sunSunsetEl.textContent = `${formatClock(window.sunset)} ↓`;
+      sunPositionEl.textContent = solar.elevation > 0
+        ? `${sunDirection(solar.azimuth)} · ${Math.round(solar.elevation)}°`
+        : 'SUN BELOW';
 
       const facing = selectedUnit ? stackFacing.get(selectedUnit.block)?.[selectedUnit.stack] : null;
       const exposure = facadeExposure(facing, solar);
-      if (selectedUnit && facing && exposure) {
-        sunSelectedEl.innerHTML = `<b>#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}</b> · ${facing === 'N' ? 'North' : 'South'}-facing · <em class="${exposure.level}">${exposure.label}</em>`;
-      } else if (selectedUnit && facing && solar.elevation <= 0) {
-        sunSelectedEl.innerHTML = `<b>#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}</b> · ${facing === 'N' ? 'North' : 'South'}-facing · Sun below horizon`;
-      } else {
-        sunSelectedEl.textContent = 'Drag time to move the sun and building shadows.';
-      }
+      sunPanel.title = selectedUnit && facing && exposure
+        ? `#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack} · ${facing === 'N' ? 'North' : 'South'}-facing · ${exposure.label}`
+        : 'Drag to change the time of day.';
 
-      sunPanel.querySelectorAll('[data-sun-minutes]').forEach(btn => {
-        btn.classList.toggle('active', Number(btn.dataset.sunMinutes) === sunStudy.minutes);
-      });
+      updateSunCompass();
     }
 
-    function setSunStudyEnabled(enabled) {
-      sunStudy.enabled = Boolean(enabled);
-      sunPanel.hidden = !sunStudy.enabled;
-      compass.hidden = !sunStudy.enabled;
-      sceneShell?.classList.toggle('sun-study-active',sunStudy.enabled);
-      if (!sunStudy.enabled) {
-        sun.position.set(-27,48,-20);
-        sun.intensity = 3.0;
-        skyLight.intensity = 2.45;
-        scene.background.set(0x0a1713);
-        scene.fog.color.set(0x0a1713);
-      }
-      updateSunStudy();
-    }
-
-    document.getElementById('layerSunStudy')?.addEventListener('change',e=>setSunStudyEnabled(e.target.checked));
     sunSlider.addEventListener('input',()=>{
       sunStudy.minutes = Number(sunSlider.value);
       updateSunStudy();
@@ -1988,16 +1932,12 @@
     sunDateInput.addEventListener('change',()=>{
       if (!sunDateInput.value) return;
       sunStudy.date = sunDateInput.value;
+      sunDateText.textContent = formatSunDate(sunStudy.date);
       updateSunStudy();
     });
-    sunPanel.querySelectorAll('[data-sun-minutes]').forEach(btn=>btn.addEventListener('click',()=>{
-      sunStudy.minutes = Number(btn.dataset.sunMinutes);
-      sunSlider.value = String(sunStudy.minutes);
-      updateSunStudy();
-    }));
     sunPanel.addEventListener('pointerdown',e=>e.stopPropagation());
-    compass.addEventListener('pointerdown',e=>e.stopPropagation());
     updateSunStudy();
+
     const ground = new THREE.Mesh(
       new THREE.BoxGeometry(66,1.15,61),
       new THREE.MeshStandardMaterial({color:0x49624f,roughness:.98})
@@ -2076,35 +2016,95 @@
     function makeBuilding(block) {
       const g=new THREE.Group();
       const h=block.storeys*floorHeight;
-      const mat=new THREE.MeshStandardMaterial({map:facadeTexture(block),color:0xffffff,roughness:.82});
+      const plan=stackPlan.get(block.id) || [];
+      const stackOrder=[...(plan[0]||[]),...(plan[1]||[]),...(plan[2]||[]),...(plan[3]||[])];
+      const stackByNo=new Map(block.stacks.map(s=>[s.no,s]));
+      const colW=block.model.width*.205;
+      const colD=block.model.depth*.43;
+      const xOuter=block.model.width*.30;
+      const xInner=block.model.width*.095;
+      const zNorth=block.model.depth*.27;
+      const zSouth=block.model.depth*.27;
+      const zInset=block.model.depth*.09;
 
-      // Schematic crossed-wing tower: richer than a single cuboid, but intentionally not sold as exact BIM geometry.
-      const mainWing=new THREE.Mesh(new THREE.BoxGeometry(block.model.width,h,block.model.depth),mat);
-      mainWing.position.y=h/2; mainWing.castShadow=true; mainWing.receiveShadow=true; mainWing.userData={blockId:block.id,kind:'block'};
-      blockMeshes.push(mainWing); g.add(mainWing);
+      const slots=[
+        [-xOuter,-zNorth],[-xInner,-zNorth],
+        [ xInner,-zInset],[ xOuter,-zInset],
+        [-xOuter, zSouth],[-xInner, zSouth],
+        [ xInner, zInset],[ xOuter, zInset]
+      ];
 
-      const crossWing=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*.28,h*.94,block.model.depth*1.65),mat.clone());
-      crossWing.position.set(-block.model.width*.08,h*.47,0); crossWing.castShadow=true; crossWing.receiveShadow=true; crossWing.userData={blockId:block.id,kind:'block'};
-      blockMeshes.push(crossWing); g.add(crossWing);
+      stackOrder.forEach((stackNo,index)=>{
+        const stack=stackByNo.get(stackNo);
+        if(!stack || !slots[index]) return;
+        const [x,z]=slots[index];
+        const material=new THREE.MeshStandardMaterial({
+          map:facadeTexture({stacks:[stack]}),
+          color:0xffffff,
+          roughness:.82,
+          emissive:0x000000,
+          emissiveIntensity:0
+        });
+        const mesh=new THREE.Mesh(new THREE.BoxGeometry(colW,h,colD),material);
+        mesh.position.set(x,h/2,z);
+        mesh.castShadow=true;
+        mesh.receiveShadow=true;
+        mesh.userData={
+          blockId:block.id,
+          stackNo:stack.no,
+          flatType:stack.type,
+          facing:stackFacing.get(block.id)?.[stack.no] || null,
+          kind:'stack'
+        };
+        blockMeshes.push(mesh);
+        stackMeshByKey.set(`${block.id}|${stack.no}`,mesh);
+        g.add(mesh);
+      });
 
-      const podium=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.07,.75,block.model.depth*1.14),new THREE.MeshStandardMaterial({color:0xc7c2b5,roughness:1}));
-      podium.position.y=.38; podium.castShadow=true; g.add(podium);
+      const core=new THREE.Mesh(
+        new THREE.BoxGeometry(block.model.width*.23,h*.985,block.model.depth*.70),
+        new THREE.MeshStandardMaterial({color:0xbab7ad,roughness:.96})
+      );
+      core.position.set(-block.model.width*.01,h*.492,0);
+      core.castShadow=true;
+      core.receiveShadow=true;
+      core.userData={blockId:block.id,kind:'block-core'};
+      g.add(core);
+
+      const podium=new THREE.Mesh(
+        new THREE.BoxGeometry(block.model.width*.88,.75,block.model.depth*1.10),
+        new THREE.MeshStandardMaterial({color:0xc7c2b5,roughness:1})
+      );
+      podium.position.y=.38;
+      podium.castShadow=true;
+      g.add(podium);
 
       // Exact non-residential terrace levels from the unit-distribution charts, rendered as visual bands.
       for (const level of terraceLevels(block)) {
         const y=(level-.5)*floorHeight;
-        const band=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*1.05,.16,block.model.depth*1.18),new THREE.MeshStandardMaterial({color:0x73926b,roughness:.9,emissive:0x162b1c,emissiveIntensity:.25}));
-        band.position.y=y; g.add(band);
+        const band=new THREE.Mesh(
+          new THREE.BoxGeometry(block.model.width*.92,.16,block.model.depth*1.12),
+          new THREE.MeshStandardMaterial({color:0x73926b,roughness:.9,emissive:0x162b1c,emissiveIntensity:.25})
+        );
+        band.position.y=y;
+        g.add(band);
       }
 
       if (block.roofGardenAtTop) {
-        const roof=new THREE.Mesh(new THREE.BoxGeometry(block.model.width*.72,.16,block.model.depth*1.05),new THREE.MeshStandardMaterial({color:0x71956c,roughness:1}));
-        roof.position.set(block.model.width*.08,h+.1,0); g.add(roof);
+        const roof=new THREE.Mesh(
+          new THREE.BoxGeometry(block.model.width*.72,.16,block.model.depth*1.05),
+          new THREE.MeshStandardMaterial({color:0x71956c,roughness:1})
+        );
+        roof.position.set(block.model.width*.08,h+.1,0);
+        g.add(roof);
       }
 
-      g.position.set(block.model.x,0,block.model.z); g.rotation.y=block.model.rotationY||0;
-      scene.add(g); blockGroups.set(block.id,g);
+      g.position.set(block.model.x,0,block.model.z);
+      g.rotation.y=block.model.rotationY||0;
+      scene.add(g);
+      blockGroups.set(block.id,g);
     }
+    DATA.blocks.forEach(makeBuilding);
     DATA.blocks.forEach(makeBuilding);
 
     function addFeatureMesh(feature, mesh, layer='amenity') {
@@ -2260,14 +2260,12 @@
     function screenPosition(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera);const r=sceneHost.getBoundingClientRect();return {x:(p.x*.5+.5)*r.width,y:(-p.y*.5+.5)*r.height,behind:p.z>1};}
 
     function updateSunCompass(){
-      if(!sunStudy.enabled || compass.hidden) return;
       const center = screenPosition(controls.target.x,0,controls.target.z);
-      const directions = {
-        N:[0,-9],
-        E:[9,0],
-        S:[0,9],
-        W:[-9,0]
-      };
+      const directions = { N:[0,-9], E:[9,0], S:[0,9], W:[-9,0] };
+      const ring=compass.querySelector('.sun-compass-ring');
+      const size=ring?.clientWidth || 48;
+      const centerPx=size/2;
+      const radius=size*.34;
       for(const [key,[dx,dz]] of Object.entries(directions)){
         const p = screenPosition(controls.target.x+dx,0,controls.target.z+dz);
         const vx = p.x-center.x;
@@ -2275,10 +2273,11 @@
         const length = Math.hypot(vx,vy) || 1;
         const el = sunCompassLabels.get(key);
         if(!el) continue;
-        el.style.left = `${36 + (vx/length)*24}px`;
-        el.style.top = `${36 + (vy/length)*24}px`;
+        el.style.left = `${centerPx + (vx/length)*radius}px`;
+        el.style.top = `${centerPx + (vy/length)*radius}px`;
       }
-    }    function updateLabels(){
+    }
+    function updateLabels(){    }    function updateLabels(){
       for(const block of DATA.blocks){const p=screenPosition(block.model.x,block.storeys*floorHeight+1.7,block.model.z);const el=labels.get(block.id);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       for(const feature of allLabelFeatures){const el=featureLabels.get(feature.id);if(!el)continue;const p=screenPosition(feature.x,(feature.height||.5)+1,feature.z);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       roadLabelEls.forEach(r=>{const p=screenPosition(r.x,.25,r.z);r.el.style.left=`${p.x}px`;r.el.style.top=`${p.y}px`;r.el.style.display=p.behind?'none':'';});
@@ -2294,14 +2293,12 @@
       }
       controls.update();
       updateLabels();
-      if(sunStudy.enabled){
-        const selectionKey=selectedUnit ? `${selectedUnit.block}|${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : '';
-        if(selectionKey!==sunStudy.lastSelectionKey){
-          sunStudy.lastSelectionKey=selectionKey;
-          updateSunStudy();
-        }
-        updateSunCompass();
+      const selectionKey=selectedUnit ? `${selectedUnit.block}|${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : '';
+      if(selectionKey!==sunStudy.lastSelectionKey){
+        sunStudy.lastSelectionKey=selectionKey;
+        updateSunStudy();
       }
+      updateSunCompass();
       renderer.render(scene,camera);
     }
     requestAnimationFrame(animate);
@@ -2344,14 +2341,16 @@
       );
       floorHighlight.position.y=y; group.add(floorHighlight);
 
-      const stackIndex=block.stacks.findIndex(s=>s.no===u.stack);
-      const cellW=block.model.width/block.stacks.length;
-      const x=-block.model.width/2 + cellW*(stackIndex+.5);
-      unitHighlight=new THREE.Mesh(
-        new THREE.BoxGeometry(cellW*.78,floorHeight*.68,.12),
-        new THREE.MeshBasicMaterial({color:0xf2ff9c,transparent:true,opacity:.92})
-      );
-      unitHighlight.position.set(x,y,block.model.depth/2+.09); group.add(unitHighlight);
+      const stackMesh=stackMeshByKey.get(`${u.block}|${u.stack}`);
+      if(stackMesh){
+        const params=stackMesh.geometry?.parameters || {};
+        unitHighlight=new THREE.Mesh(
+          new THREE.BoxGeometry((params.width||1)*1.06,floorHeight*.72,(params.depth||1)*1.06),
+          new THREE.MeshBasicMaterial({color:0xf2ff9c,transparent:true,opacity:.48,depthWrite:false})
+        );
+        unitHighlight.position.set(stackMesh.position.x,y,stackMesh.position.z);
+        group.add(unitHighlight);
+      }
 
       const target=new THREE.Vector3(block.model.x,y,block.model.z);
       const pos=new THREE.Vector3(block.model.x+10,y+5.8,block.model.z+13);
@@ -2361,13 +2360,52 @@
 
     // Raycast blocks and site features.
     const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2(); let down={x:0,y:0};
+    const stackHoverLabel=document.createElement('div');
+    stackHoverLabel.className='stack-hover-label';
+    stackHoverLabel.hidden=true;
+    sceneHost.appendChild(stackHoverLabel);
+
+    function stackHitFromPointer(e){
+      const rect=renderer.domElement.getBoundingClientRect();
+      pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+      pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(pointer,camera);
+      return raycaster.intersectObjects(blockMeshes,false).find(hit=>hit.object.userData?.kind==='stack') || null;
+    }
+
+    renderer.domElement.addEventListener('pointermove',e=>{
+      if(e.pointerType==='touch') return;
+      const hit=stackHitFromPointer(e);
+      if(!hit){
+        stackHoverLabel.hidden=true;
+        renderer.domElement.style.cursor='';
+        return;
+      }
+      const data=hit.object.userData;
+      const block=DATA.blocks.find(b=>b.id===data.blockId);
+      const stack=block?.stacks.find(s=>s.no===data.stackNo);
+      const rect=sceneHost.getBoundingClientRect();
+      stackHoverLabel.innerHTML=`<strong>STACK ${data.stackNo}</strong><span>${stack ? typeLabel(stack.type) : ''}${data.facing ? ` · ${data.facing}-facing` : ''}</span>`;
+      stackHoverLabel.style.left=`${Math.min(rect.width-130,Math.max(72,e.clientX-rect.left+14))}px`;
+      stackHoverLabel.style.top=`${Math.min(rect.height-52,Math.max(12,e.clientY-rect.top-8))}px`;
+      stackHoverLabel.hidden=false;
+      renderer.domElement.style.cursor='pointer';
+    });
+    renderer.domElement.addEventListener('pointerleave',()=>{
+      stackHoverLabel.hidden=true;
+      renderer.domElement.style.cursor='';
+    });
     renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
     renderer.domElement.addEventListener('pointerup',e=>{
       if(e.button!==0||Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)return;
       const rect=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-rect.left)/rect.width)*2-1;pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);
       const hits=raycaster.intersectObjects([...blockMeshes,...featureMeshes],false);if(!hits.length)return;
       const hit=hits[0].object;
-      if(hit.userData.kind==='block'){const block=DATA.blocks.find(b=>b.id===hit.userData.blockId);if(block)openBlock(block);}
+      if(hit.userData.kind==='stack'){
+        const block=DATA.blocks.find(b=>b.id===hit.userData.blockId);
+        if(block) openBlock(block,hit.userData.stackNo);
+      }
+      else if(hit.userData.kind==='block'){const block=DATA.blocks.find(b=>b.id===hit.userData.blockId);if(block)openBlock(block);}
       else if(hit.userData.kind==='feature'){
         const f=allLabelFeatures.find(x=>x.id===hit.userData.featureId) || DATA.siteFeatures.find(x=>x.id===hit.userData.featureId);
         if(f)openFeature(f);
@@ -2384,15 +2422,17 @@
       setFlatTypeMenu(false);
 
       for(const block of DATA.blocks){
-        const has=activeType==='all'||block.stacks.some(s=>s.type===activeType);
+        const blockHas=activeType==='all'||block.stacks.some(s=>s.type===activeType);
         const g=blockGroups.get(block.id);
         g.traverse(obj=>{
-          if(obj.isMesh&&obj!==floorHighlight&&obj!==unitHighlight){
-            obj.material.transparent=!has;
-            obj.material.opacity=has?1:.14;
+          if(!obj.isMesh||obj===floorHighlight||obj===unitHighlight||!obj.material) return;
+          if(obj.userData?.kind==='stack'){
+            const stackHas=activeType==='all'||obj.userData.flatType===activeType;
+            obj.material.transparent=!stackHas;
+            obj.material.opacity=stackHas?1:.10;
           }
         });
-        labels.get(block.id).classList.toggle('dimmed',!has);
+        labels.get(block.id).classList.toggle('dimmed',!blockHas);
       }
 
       refreshBlockLabels();
