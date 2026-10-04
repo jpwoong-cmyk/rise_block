@@ -1262,7 +1262,7 @@ dialog::backdrop{animation:backdropIn .2s ease both}
   position:absolute;
   z-index:9;
   left:18px;
-  top:250px;
+  top:310px;
   width:60px;
   padding:7px 5px 6px;
   display:flex;
