@@ -107,11 +107,25 @@
   }
 
   function normaliseUnitInput(value) {
-    const digits = String(value || '').replace(/\D/g, '').slice(0, 5);
-    if (digits.length < 4) return digits;
-    const stack = digits.slice(-3);
-    const floor = digits.slice(0, -3).padStart(2, '0');
-    return `${floor}-${stack}`;
+    const raw = String(value || '').trim();
+
+    // Once a dash exists, preserve the user's partial edit exactly.
+    // This keeps Backspace natural: 12-105 -> 12-10 -> 12-1 -> 12 -> 1.
+    if (raw.includes('-')) {
+      const [floorPart = '', stackPart = ''] = raw.split('-', 2);
+      const floor = floorPart.replace(/\D/g, '').slice(0, 2);
+      const stack = stackPart.replace(/\D/g, '').slice(0, 3);
+      if (!floor) return '';
+      return stack ? `${floor}-${stack}` : floor;
+    }
+
+    const digits = raw.replace(/\D/g, '').slice(0, 5);
+
+    // A Berlayar unit needs 2 floor digits + 3 stack digits.
+    // Do not guess while the user is still typing.
+    if (digits.length < 5) return digits;
+
+    return `${digits.slice(0, 2)}-${digits.slice(2, 5)}`;
   }
 
   function injectTrigger() {
