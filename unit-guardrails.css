@@ -1,0 +1,82 @@
+/* RiseBlock unit-report guardrails + My Booking favourite */
+.availability-correction-dialog {
+  width: min(430px, calc(100vw - 28px));
+  padding: 0;
+  border: 1px solid rgba(188,232,138,.22);
+  border-radius: 14px;
+  background: #10231e;
+  color: var(--text, #eef7f0);
+  box-shadow: 0 24px 70px rgba(0,0,0,.5);
+}
+.availability-correction-dialog::backdrop {
+  background: rgba(3,8,6,.78);
+  backdrop-filter: blur(5px);
+}
+.availability-correction-copy { padding: 22px 22px 18px; }
+.availability-correction-copy h3 { margin: 7px 0 12px; font-size: 23px; }
+.availability-correction-copy p {
+  margin: 8px 0;
+  color: var(--muted, #a6b6ae);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.availability-correction-copy p strong { color: #eef7f0; }
+.availability-correction-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 8px;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line, rgba(255,255,255,.1));
+  background: #0b1814;
+}
+.availability-correction-actions button {
+  min-height: 42px;
+  border: 1px solid var(--line-strong, rgba(255,255,255,.18));
+  border-radius: 8px;
+  background: transparent;
+  color: #dce9df;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+}
+.availability-correction-actions .confirm {
+  border-color: rgba(188,232,138,.55);
+  background: var(--accent, #bce88a);
+  color: #0b1713;
+}
+
+/* Significant, direct favourite control inside Quick Update > My booking. */
+#qumBookingMatch .qum-booking-card { position: relative; }
+.qum-book-favourite-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(244,154,160,.42);
+  border-radius: 50%;
+  background: rgba(244,154,160,.06);
+  color: #f49aa0;
+  cursor: pointer;
+  z-index: 2;
+}
+.qum-book-favourite-btn span {
+  font-size: 25px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+.qum-book-favourite-btn.active {
+  border-color: rgba(244,154,160,.78);
+  background: rgba(244,154,160,.16);
+  color: #ffc3c7;
+  box-shadow: inset 0 0 0 1px rgba(244,154,160,.12), 0 0 18px rgba(244,154,160,.08);
+}
+.qum-book-favourite-btn:focus-visible {
+  outline: 2px solid var(--accent, #bce88a);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  #qumBookingMatch .qum-booking-card > div:first-child { padding-right: 54px; }
+}
