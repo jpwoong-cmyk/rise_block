@@ -1,4 +1,4 @@
-RiseBlock - compact Sun Study + stack towers
+RiseBlock - compact Sun Study + stack towers v2.1
 
 Replace:
 - app.js
@@ -11,7 +11,7 @@ No extra JS/CSS files.
 Changes:
 1. Sun Study is always available. No on/off toggle.
 2. Compact left-side vertical drag control.
-3. 30% translucent blurred glass.
+3. Smaller, lighter 12-14% translucent blurred glass, shifted lower so it clears Last Update.
 4. Default time is 12:00 PM.
 5. Date remains changeable through the compact date control.
 6. Compass is integrated into the same narrow rail.

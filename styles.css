@@ -1262,27 +1262,27 @@ dialog::backdrop{animation:backdropIn .2s ease both}
   position:absolute;
   z-index:9;
   left:18px;
-  top:178px;
-  width:78px;
-  padding:10px 8px 9px;
+  top:250px;
+  width:60px;
+  padding:7px 5px 6px;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:6px;
+  gap:4px;
   color:var(--text);
-  background:rgba(8,20,16,.30);
-  border:1px solid rgba(216,240,158,.16);
-  backdrop-filter:blur(14px) saturate(1.05);
-  -webkit-backdrop-filter:blur(14px) saturate(1.05);
+  background:rgba(8,20,16,.14);
+  border:1px solid rgba(216,240,158,.10);
+  backdrop-filter:blur(10px) saturate(1.03);
+  -webkit-backdrop-filter:blur(10px) saturate(1.03);
   box-shadow:0 12px 34px rgba(0,0,0,.16);
   pointer-events:auto;
 }
-.sun-study-kicker{font-size:8px;font-weight:900;letter-spacing:.18em;color:var(--accent-2)}
-#sunStudyTime{font-size:12px;line-height:1;font-weight:850;font-variant-numeric:tabular-nums;white-space:nowrap}
-#sunStudyPosition{font-size:8px;color:#9fb3a8;font-weight:760;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sun-study-kicker{font-size:7px;font-weight:900;letter-spacing:.18em;color:var(--accent-2)}
+#sunStudyTime{font-size:10px;line-height:1;font-weight:850;font-variant-numeric:tabular-nums;white-space:nowrap}
+#sunStudyPosition{font-size:7px;color:#9fb3a8;font-weight:760;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 .sun-study-vertical{
-  height:174px;
+  height:136px;
   display:grid;
   grid-template-rows:auto 1fr auto;
   justify-items:center;
@@ -1293,7 +1293,7 @@ dialog::backdrop{animation:backdropIn .2s ease both}
 .sun-study-vertical>span{font-size:7px;color:#789287;font-weight:850;letter-spacing:.06em}
 #sunStudySlider{
   width:24px;
-  height:146px;
+  height:110px;
   margin:0;
   writing-mode:vertical-lr;
   direction:rtl;
@@ -1302,16 +1302,16 @@ dialog::backdrop{animation:backdropIn .2s ease both}
 }
 .sun-study-date-control{
   position:relative;
-  width:58px;
-  min-height:25px;
+  width:46px;
+  min-height:21px;
   display:grid;
   place-items:center;
   border-top:1px solid rgba(255,255,255,.07);
   border-bottom:1px solid rgba(255,255,255,.07);
   color:#a9bbb1;
-  font-size:7px;
+  font-size:6px;
   font-weight:850;
-  letter-spacing:.06em;
+  letter-spacing:.04em;
   cursor:pointer;
 }
 .sun-study-date-control input{
@@ -1324,12 +1324,12 @@ dialog::backdrop{animation:backdropIn .2s ease both}
   color-scheme:dark;
 }
 
-.sun-compass{width:48px;height:48px;pointer-events:none}
+.sun-compass{width:36px;height:36px;pointer-events:none}
 .sun-compass-ring{
   position:relative;
-  width:48px;
-  height:48px;
-  border:1px solid rgba(216,240,158,.18);
+  width:36px;
+  height:36px;
+  border:1px solid rgba(216,240,158,.14);
   border-radius:50%;
   background:rgba(4,12,9,.16);
 }
@@ -1344,7 +1344,7 @@ dialog::backdrop{animation:backdropIn .2s ease both}
   position:absolute;
   transform:translate(-50%,-50%);
   z-index:2;
-  font-size:7px;
+  font-size:6px;
   font-weight:900;
   color:#b9cbc0;
   text-shadow:0 1px 4px #07100d;
@@ -1392,20 +1392,20 @@ dialog::backdrop{animation:backdropIn .2s ease both}
 @media(max-width:760px){
   .sun-study-rail{
     left:8px;
-    top:106px;
-    width:66px;
-    padding:8px 6px 7px;
-    gap:5px;
-    background:rgba(8,20,16,.30);
-    backdrop-filter:blur(12px);
-    -webkit-backdrop-filter:blur(12px);
+    top:170px;
+    width:52px;
+    padding:6px 4px 5px;
+    gap:3px;
+    background:rgba(8,20,16,.12);
+    backdrop-filter:blur(9px);
+    -webkit-backdrop-filter:blur(9px);
   }
-  #sunStudyTime{font-size:10px}
-  #sunStudyPosition{font-size:7px}
-  .sun-study-vertical{height:142px}
-  #sunStudySlider{height:116px}
-  .sun-study-date-control{width:50px;min-height:23px;font-size:6px}
-  .sun-compass,.sun-compass-ring{width:42px;height:42px}
-  .sun-compass-ring span{font-size:6px}
+  #sunStudyTime{font-size:9px}
+  #sunStudyPosition{font-size:6px}
+  .sun-study-vertical{height:116px}
+  #sunStudySlider{height:92px}
+  .sun-study-date-control{width:42px;min-height:19px;font-size:5px}
+  .sun-compass,.sun-compass-ring{width:32px;height:32px}
+  .sun-compass-ring span{font-size:5px}
   .stack-hover-label{display:none!important}
 }
