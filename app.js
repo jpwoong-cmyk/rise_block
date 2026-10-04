@@ -1706,14 +1706,298 @@
     controls.maxPolarAngle = Math.PI*.49;
     controls.target.set(-1,3,1);
 
-    scene.add(new THREE.HemisphereLight(0xe5eee6,0x23352d,2.45));
+
+    const skyLight = new THREE.HemisphereLight(0xe5eee6,0x23352d,2.45);
+    scene.add(skyLight);
     const sun = new THREE.DirectionalLight(0xffefd0,3.0);
     sun.position.set(-27,48,-20);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048,2048);
     sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55; sun.shadow.camera.bottom=-55;
+    sun.target.position.set(-1,0,1.5);
+    scene.add(sun.target);
     scene.add(sun);
 
+    // ---------- Sun study ----------
+    // Site north follows the HDB site plan: -Z = north, +X = east.
+    // Solar position uses an in-browser NOAA approximation for Berlayar Rise.
+    const SUN_STUDY_LAT = 1.26927;
+    const SUN_STUDY_LON = 103.8091;
+    const SUN_STUDY_TZ = 8;
+    const SUN_STUDY_RADIUS = 72;
+    const sceneShell = sceneHost.closest('.scene-shell');
+
+    const stackFacing = new Map(Object.entries({
+      '200A': { '113':'N','115':'N','101':'N','103':'N','111':'S','109':'S','107':'S','105':'S' },
+      '200B': { '129':'N','131':'N','117':'N','119':'N','127':'S','125':'S','123':'S','121':'S' },
+      '201A': { '145':'N','147':'N','133':'N','135':'N','143':'S','141':'S','139':'S','137':'S' },
+      '201B': { '153':'N','155':'N','157':'N','159':'N','151':'S','149':'S','163':'S','161':'S' },
+      '204A': { '104':'N','106':'N','108':'N','110':'N','102':'S','100':'S','114':'S','112':'S' },
+      '204B': { '120':'N','122':'N','124':'N','126':'N','118':'S','116':'S','130':'S','128':'S' }
+    }));
+
+    function singaporeDateValue() {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone:'Asia/Singapore', year:'numeric', month:'2-digit', day:'2-digit'
+        }).formatToParts(new Date());
+        const part = type => parts.find(p => p.type === type)?.value;
+        return `${part('year')}-${part('month')}-${part('day')}`;
+      } catch (_) {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      }
+    }
+
+    const sunStudy = {
+      enabled:false,
+      date:singaporeDateValue(),
+      minutes:13*60,
+      lastCompassKey:''
+    };
+
+    function dayOfYear(dateValue) {
+      const [y,m,d] = dateValue.split('-').map(Number);
+      return Math.floor((Date.UTC(y,m-1,d)-Date.UTC(y,0,0))/86400000);
+    }
+
+    function solarData(dateValue, minutes) {
+      const doy = dayOfYear(dateValue);
+      const hour = minutes / 60;
+      const gamma = (2*Math.PI/365) * (doy - 1 + (hour - 12)/24);
+      const eqTime = 229.18 * (
+        0.000075 + 0.001868*Math.cos(gamma) - 0.032077*Math.sin(gamma)
+        - 0.014615*Math.cos(2*gamma) - 0.040849*Math.sin(2*gamma)
+      );
+      const decl =
+        0.006918 - 0.399912*Math.cos(gamma) + 0.070257*Math.sin(gamma)
+        - 0.006758*Math.cos(2*gamma) + 0.000907*Math.sin(2*gamma)
+        - 0.002697*Math.cos(3*gamma) + 0.00148*Math.sin(3*gamma);
+
+      let trueSolarTime = (minutes + eqTime + 4*SUN_STUDY_LON - 60*SUN_STUDY_TZ) % 1440;
+      if (trueSolarTime < 0) trueSolarTime += 1440;
+      let hourAngle = trueSolarTime / 4 - 180;
+      if (hourAngle < -180) hourAngle += 360;
+
+      const lat = THREE.MathUtils.degToRad(SUN_STUDY_LAT);
+      const ha = THREE.MathUtils.degToRad(hourAngle);
+      const cosZenith = THREE.MathUtils.clamp(
+        Math.sin(lat)*Math.sin(decl) + Math.cos(lat)*Math.cos(decl)*Math.cos(ha),
+        -1, 1
+      );
+      const elevation = 90 - THREE.MathUtils.radToDeg(Math.acos(cosZenith));
+      const azimuth = (
+        THREE.MathUtils.radToDeg(
+          Math.atan2(
+            Math.sin(ha),
+            Math.cos(ha)*Math.sin(lat) - Math.tan(decl)*Math.cos(lat)
+          )
+        ) + 180 + 360
+      ) % 360;
+
+      return { elevation, azimuth, declination:THREE.MathUtils.radToDeg(decl), eqTime };
+    }
+
+    function solarDayWindow(dateValue) {
+      const doy = dayOfYear(dateValue);
+      const gamma = (2*Math.PI/365) * (doy - 1);
+      const eqTime = 229.18 * (
+        0.000075 + 0.001868*Math.cos(gamma) - 0.032077*Math.sin(gamma)
+        - 0.014615*Math.cos(2*gamma) - 0.040849*Math.sin(2*gamma)
+      );
+      const decl =
+        0.006918 - 0.399912*Math.cos(gamma) + 0.070257*Math.sin(gamma)
+        - 0.006758*Math.cos(2*gamma) + 0.000907*Math.sin(2*gamma)
+        - 0.002697*Math.cos(3*gamma) + 0.00148*Math.sin(3*gamma);
+      const lat = THREE.MathUtils.degToRad(SUN_STUDY_LAT);
+      const zenith = THREE.MathUtils.degToRad(90.833);
+      const cosHa = THREE.MathUtils.clamp(
+        Math.cos(zenith)/(Math.cos(lat)*Math.cos(decl)) - Math.tan(lat)*Math.tan(decl),
+        -1, 1
+      );
+      const ha = THREE.MathUtils.radToDeg(Math.acos(cosHa));
+      const solarNoon = 720 - 4*SUN_STUDY_LON - eqTime + SUN_STUDY_TZ*60;
+      return { sunrise:solarNoon - 4*ha, sunset:solarNoon + 4*ha, solarNoon };
+    }
+
+    function formatClock(minutes) {
+      const rounded = ((Math.round(minutes)%1440)+1440)%1440;
+      const h24 = Math.floor(rounded/60);
+      const mm = rounded%60;
+      const suffix = h24 >= 12 ? 'PM' : 'AM';
+      const h12 = h24%12 || 12;
+      return `${h12}:${String(mm).padStart(2,'0')} ${suffix}`;
+    }
+
+    function sunDirection(azimuth) {
+      const names = ['N','NE','E','SE','S','SW','W','NW'];
+      return names[Math.round(azimuth/45)%8];
+    }
+
+    function facadeExposure(facing, solar) {
+      if (!facing || solar.elevation <= 0) return null;
+      const faceAzimuth = facing === 'N' ? 0 : 180;
+      const delta = THREE.MathUtils.degToRad((((solar.azimuth-faceAzimuth)+540)%360)-180);
+      const score = Math.max(0, Math.cos(THREE.MathUtils.degToRad(solar.elevation))*Math.cos(delta));
+      if (score >= .55) return { label:'Strong direct sun', level:'high' };
+      if (score >= .22) return { label:'Some direct sun', level:'medium' };
+      if (score >= .04) return { label:'Low-angle direct sun', level:'low' };
+      return { label:'No direct facade sun', level:'none' };
+    }
+
+    const layersPanel = document.querySelector('.layers');
+    const sunLayerLabel = document.createElement('label');
+    sunLayerLabel.className = 'sun-study-layer-toggle';
+    sunLayerLabel.innerHTML = '<input type="checkbox" id="layerSunStudy" /> <span>Sun study</span>';
+    layersPanel?.appendChild(sunLayerLabel);
+
+    const sunPanel = document.createElement('section');
+    sunPanel.className = 'sun-study-panel glass';
+    sunPanel.hidden = true;
+    sunPanel.setAttribute('aria-label','Sun study controls');
+    sunPanel.innerHTML = `
+      <div class="sun-study-head">
+        <div>
+          <span class="sun-study-kicker">SUN STUDY</span>
+          <strong id="sunStudyTime">1:00 PM</strong>
+        </div>
+        <div class="sun-study-position">
+          <b id="sunStudyDirection">S</b>
+          <span id="sunStudyElevation">Sun 0° high</span>
+        </div>
+      </div>
+      <div class="sun-study-presets" role="group" aria-label="Time presets">
+        <button type="button" data-sun-minutes="540">Morning <small>9 AM</small></button>
+        <button type="button" data-sun-minutes="780" class="active">Afternoon <small>1 PM</small></button>
+        <button type="button" data-sun-minutes="1020">Evening <small>5 PM</small></button>
+      </div>
+      <div class="sun-study-slider-row">
+        <span id="sunStudySunrise">Sunrise</span>
+        <input id="sunStudySlider" type="range" min="360" max="1200" step="10" value="780" aria-label="Time of day" />
+        <span id="sunStudySunset">Sunset</span>
+      </div>
+      <div class="sun-study-foot">
+        <label>Date <input id="sunStudyDate" type="date" value="${sunStudy.date}" /></label>
+        <span id="sunStudySelected">Drag time to move the sun and shadows.</span>
+      </div>
+    `;
+    sceneHost.appendChild(sunPanel);
+
+    const compass = document.createElement('div');
+    compass.className = 'sun-compass glass';
+    compass.hidden = true;
+    compass.setAttribute('aria-label','Site compass');
+    compass.innerHTML = `
+      <div class="sun-compass-ring" aria-hidden="true">
+        <span data-cardinal="N">N</span>
+        <span data-cardinal="E">E</span>
+        <span data-cardinal="S">S</span>
+        <span data-cardinal="W">W</span>
+        <i></i>
+      </div>
+      <small>SITE</small>
+    `;
+    sceneHost.appendChild(compass);
+    const sunCompassLabels = new Map(
+      [...compass.querySelectorAll('[data-cardinal]')].map(el => [el.dataset.cardinal,el])
+    );
+
+    const sunSlider = sunPanel.querySelector('#sunStudySlider');
+    const sunDateInput = sunPanel.querySelector('#sunStudyDate');
+    const sunTimeEl = sunPanel.querySelector('#sunStudyTime');
+    const sunDirectionEl = sunPanel.querySelector('#sunStudyDirection');
+    const sunElevationEl = sunPanel.querySelector('#sunStudyElevation');
+    const sunSunriseEl = sunPanel.querySelector('#sunStudySunrise');
+    const sunSunsetEl = sunPanel.querySelector('#sunStudySunset');
+    const sunSelectedEl = sunPanel.querySelector('#sunStudySelected');
+
+    function updateSunStudy() {
+      const solar = solarData(sunStudy.date, sunStudy.minutes);
+      const window = solarDayWindow(sunStudy.date);
+      const elevationRad = THREE.MathUtils.degToRad(Math.max(-4, solar.elevation));
+      const azimuthRad = THREE.MathUtils.degToRad(solar.azimuth);
+      const horizontal = Math.cos(elevationRad) * SUN_STUDY_RADIUS;
+
+      sun.position.set(
+        Math.sin(azimuthRad) * horizontal,
+        Math.max(1.5, Math.sin(elevationRad) * SUN_STUDY_RADIUS),
+        -Math.cos(azimuthRad) * horizontal
+      );
+      sun.target.position.set(-1,0,1.5);
+
+      const daylight = THREE.MathUtils.clamp((solar.elevation + 4) / 22, 0, 1);
+      sun.intensity = sunStudy.enabled ? 0.08 + daylight*3.35 : 3.0;
+      skyLight.intensity = sunStudy.enabled ? 0.72 + daylight*1.55 : 2.45;
+
+      if (sunStudy.enabled) {
+        const nightMix = 1 - daylight;
+        scene.background.setRGB(
+          0.039 + 0.010*(1-nightMix),
+          0.082 + 0.020*(1-nightMix),
+          0.068 + 0.014*(1-nightMix)
+        );
+        scene.fog.color.copy(scene.background);
+      } else {
+        scene.background.set(0x0a1713);
+        scene.fog.color.set(0x0a1713);
+      }
+
+      sunTimeEl.textContent = formatClock(sunStudy.minutes);
+      sunDirectionEl.textContent = solar.elevation > 0 ? sunDirection(solar.azimuth) : '—';
+      sunElevationEl.textContent = solar.elevation > 0
+        ? `Sun ${Math.round(solar.elevation)}° high · ${Math.round(solar.azimuth)}° azimuth`
+        : 'Sun below the horizon';
+      sunSunriseEl.textContent = `↑ ${formatClock(window.sunrise)}`;
+      sunSunsetEl.textContent = `${formatClock(window.sunset)} ↓`;
+
+      const facing = selectedUnit ? stackFacing.get(selectedUnit.block)?.[selectedUnit.stack] : null;
+      const exposure = facadeExposure(facing, solar);
+      if (selectedUnit && facing && exposure) {
+        sunSelectedEl.innerHTML = `<b>#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}</b> · ${facing === 'N' ? 'North' : 'South'}-facing · <em class="${exposure.level}">${exposure.label}</em>`;
+      } else if (selectedUnit && facing && solar.elevation <= 0) {
+        sunSelectedEl.innerHTML = `<b>#${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}</b> · ${facing === 'N' ? 'North' : 'South'}-facing · Sun below horizon`;
+      } else {
+        sunSelectedEl.textContent = 'Drag time to move the sun and building shadows.';
+      }
+
+      sunPanel.querySelectorAll('[data-sun-minutes]').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.dataset.sunMinutes) === sunStudy.minutes);
+      });
+    }
+
+    function setSunStudyEnabled(enabled) {
+      sunStudy.enabled = Boolean(enabled);
+      sunPanel.hidden = !sunStudy.enabled;
+      compass.hidden = !sunStudy.enabled;
+      sceneShell?.classList.toggle('sun-study-active',sunStudy.enabled);
+      if (!sunStudy.enabled) {
+        sun.position.set(-27,48,-20);
+        sun.intensity = 3.0;
+        skyLight.intensity = 2.45;
+        scene.background.set(0x0a1713);
+        scene.fog.color.set(0x0a1713);
+      }
+      updateSunStudy();
+    }
+
+    document.getElementById('layerSunStudy')?.addEventListener('change',e=>setSunStudyEnabled(e.target.checked));
+    sunSlider.addEventListener('input',()=>{
+      sunStudy.minutes = Number(sunSlider.value);
+      updateSunStudy();
+    });
+    sunDateInput.addEventListener('change',()=>{
+      if (!sunDateInput.value) return;
+      sunStudy.date = sunDateInput.value;
+      updateSunStudy();
+    });
+    sunPanel.querySelectorAll('[data-sun-minutes]').forEach(btn=>btn.addEventListener('click',()=>{
+      sunStudy.minutes = Number(btn.dataset.sunMinutes);
+      sunSlider.value = String(sunStudy.minutes);
+      updateSunStudy();
+    }));
+    sunPanel.addEventListener('pointerdown',e=>e.stopPropagation());
+    compass.addEventListener('pointerdown',e=>e.stopPropagation());
+    updateSunStudy();
     const ground = new THREE.Mesh(
       new THREE.BoxGeometry(66,1.15,61),
       new THREE.MeshStandardMaterial({color:0x49624f,roughness:.98})
@@ -1974,7 +2258,27 @@
     window.addEventListener('resize',resize); resize();
 
     function screenPosition(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera);const r=sceneHost.getBoundingClientRect();return {x:(p.x*.5+.5)*r.width,y:(-p.y*.5+.5)*r.height,behind:p.z>1};}
-    function updateLabels(){
+
+    function updateSunCompass(){
+      if(!sunStudy.enabled || compass.hidden) return;
+      const center = screenPosition(controls.target.x,0,controls.target.z);
+      const directions = {
+        N:[0,-9],
+        E:[9,0],
+        S:[0,9],
+        W:[-9,0]
+      };
+      for(const [key,[dx,dz]] of Object.entries(directions)){
+        const p = screenPosition(controls.target.x+dx,0,controls.target.z+dz);
+        const vx = p.x-center.x;
+        const vy = p.y-center.y;
+        const length = Math.hypot(vx,vy) || 1;
+        const el = sunCompassLabels.get(key);
+        if(!el) continue;
+        el.style.left = `${36 + (vx/length)*24}px`;
+        el.style.top = `${36 + (vy/length)*24}px`;
+      }
+    }    function updateLabels(){
       for(const block of DATA.blocks){const p=screenPosition(block.model.x,block.storeys*floorHeight+1.7,block.model.z);const el=labels.get(block.id);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       for(const feature of allLabelFeatures){const el=featureLabels.get(feature.id);if(!el)continue;const p=screenPosition(feature.x,(feature.height||.5)+1,feature.z);el.style.left=`${p.x}px`;el.style.top=`${p.y}px`;el.style.display=p.behind?'none':'';}
       roadLabelEls.forEach(r=>{const p=screenPosition(r.x,.25,r.z);r.el.style.left=`${p.x}px`;r.el.style.top=`${p.y}px`;r.el.style.display=p.behind?'none':'';});
@@ -1988,7 +2292,17 @@
         controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,e);
         if(p>=1)cameraTween=null;
       }
-      controls.update(); updateLabels(); renderer.render(scene,camera);
+      controls.update();
+      updateLabels();
+      if(sunStudy.enabled){
+        const selectionKey=selectedUnit ? `${selectedUnit.block}|${floorNumber(selectedUnit.floor)}-${selectedUnit.stack}` : '';
+        if(selectionKey!==sunStudy.lastSelectionKey){
+          sunStudy.lastSelectionKey=selectionKey;
+          updateSunStudy();
+        }
+        updateSunCompass();
+      }
+      renderer.render(scene,camera);
     }
     requestAnimationFrame(animate);
 

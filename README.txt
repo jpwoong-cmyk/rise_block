@@ -1,23 +1,23 @@
-RISEBLOCK - UNIT GUARDRAILS + MY BOOKING FAVOURITE
+RiseBlock - Sun Study update
 
-Files in this ZIP:
-1. index.html              REPLACE your current index.html
-2. unit-guardrails.js      ADD to repo root
-3. unit-guardrails.css     ADD to repo root
+Replace ONLY:
+- app.js
+- styles.css
 
-No other frontend files need to be replaced.
+No index.html change.
+No Supabase migration.
+No new JS/CSS files.
 
-The Supabase backend migration has already been applied to the live RiseBlock project.
+What is included:
+- Sun Study toggle added to existing Map Layers.
+- Date picker and draggable 6:00 AM-8:00 PM time slider.
+- Morning 9 AM, Afternoon 1 PM, Evening 5 PM shortcuts.
+- Solar azimuth/elevation calculated client-side for Berlayar Rise.
+- Existing Three.js directional light now follows the calculated sun.
+- Existing building shadows move with time.
+- Dynamic N/E/S/W compass follows the rotated 3D view.
+- Sunrise/sunset readout.
+- Selected flats show North/South-facing exposure using stack orientation transcribed from the HDB site plan.
 
-BEHAVIOUR
-- Taken remains fast / one-tap.
-- Pressing Available on a unit already shown Available does not create another report.
-- If a unit has Taken evidence, Available asks the user to confirm the correction.
-- If the same browser reverses its own recent Taken report, the backend removes that Taken report instead of creating an Available report.
-- A different reporter challenging Taken creates conflicting evidence instead of simply wiping Taken.
-- Quick Update > My booking gets a large heart icon directly on the matched unit. No prompt.
-- The heart writes to the same browser-local RiseBlock favourites key.
-- If a favourite is changed from My booking, the page refreshes only after Quick Update closes so the main Favourites panel is fully synced.
-
-DEPLOY
-Upload/commit these three files to the repository root. Vercel should redeploy from main as usual.
+Accuracy:
+The sun position is astronomical/indicative. The current 3D towers are schematic rather than BIM geometry, so shadow and facade exposure should be treated as a planning aid, not a professional solar simulation.
