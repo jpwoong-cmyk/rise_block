@@ -80,3 +80,98 @@
 @media (max-width: 760px) {
   #qumBookingMatch .qum-booking-card > div:first-child { padding-right: 54px; }
 }
+
+/* Taken is a community-wide status, so confirm before changing it. */
+.taken-confirmation-dialog {
+  width: min(460px, calc(100vw - 28px));
+  padding: 0;
+  border: 1px solid rgba(188,232,138,.22);
+  border-radius: 14px;
+  background: #10231e;
+  color: var(--text, #eef7f0);
+  box-shadow: 0 24px 70px rgba(0,0,0,.5);
+}
+.taken-confirmation-dialog::backdrop {
+  background: rgba(3,8,6,.78);
+  backdrop-filter: blur(5px);
+}
+.taken-confirmation-copy { padding: 22px 22px 18px; }
+.taken-confirmation-copy h3 { margin: 7px 0 12px; font-size: 23px; }
+.taken-confirmation-copy > p {
+  margin: 8px 0;
+  color: var(--muted, #a6b6ae);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.taken-confirmation-copy > p strong { color: #eef7f0; }
+.taken-favourite-callout {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-top: 16px;
+  padding: 13px;
+  border: 1px solid rgba(244,154,160,.28);
+  border-radius: 10px;
+  background: rgba(244,154,160,.055);
+}
+.taken-favourite-callout > span {
+  color: #f49aa0;
+  font-size: 26px;
+  line-height: 1;
+  text-align: center;
+}
+.taken-favourite-callout p {
+  margin: 0;
+  color: #bdcbc4;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.taken-favourite-callout strong { color: #eef7f0; }
+.taken-confirmation-actions {
+  display: grid;
+  grid-template-columns: .72fr 1.15fr 1.25fr;
+  gap: 8px;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line, rgba(255,255,255,.1));
+  background: #0b1814;
+}
+.taken-confirmation-actions button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong, rgba(255,255,255,.18));
+  border-radius: 8px;
+  background: transparent;
+  color: #dce9df;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+}
+.taken-confirmation-actions .favourite {
+  border-color: rgba(244,154,160,.45);
+  color: #ffc3c7;
+  background: rgba(244,154,160,.07);
+}
+.taken-confirmation-actions .favourite:disabled {
+  opacity: .72;
+  cursor: default;
+}
+.taken-confirmation-actions .confirm {
+  border-color: rgba(239,91,91,.65);
+  background: #ef5b5b;
+  color: #fff;
+}
+.taken-confirmation-actions button:focus-visible {
+  outline: 2px solid var(--accent, #bce88a);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .taken-confirmation-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .taken-confirmation-actions [data-taken-cancel] {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}

@@ -57,6 +57,12 @@
     return ['available', 'untracked', 'reported_available', 'confirmed_available'].includes(status);
   }
 
+  function safeText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+    }[char]));
+  }
+
   function setQuickFeedback(message) {
     const el = document.getElementById('quickUnitFeedback');
     if (el) el.textContent = message;
@@ -224,7 +230,95 @@
     }
   }
 
-  // Capture phase lets the guardrail step in before the existing one-tap Available handler.
+  // ---------- Taken confirmation: protect community status from accidental taps ----------
+  let bypassTakenConfirmation = false;
+
+  function confirmTakenReport(blockCode, unitNo) {
+    return new Promise(resolve => {
+      const favouriteButton = document.getElementById('quickFavouriteBtn');
+      const alreadyFavourite = favouriteButton?.getAttribute('aria-pressed') === 'true';
+
+      const dialog = document.createElement('dialog');
+      dialog.className = 'taken-confirmation-dialog';
+      dialog.innerHTML = `
+        <div class="taken-confirmation-copy">
+          <div class="eyebrow">BEFORE YOU MARK IT TAKEN</div>
+          <h3>Is this unit actually taken?</h3>
+          <p><strong>Block ${safeText(blockCode)} · #${safeText(unitNo)}</strong></p>
+          <p><b>Taken</b> changes the community tracker for everyone. Use it only when you know this flat has already been selected or booked.</p>
+          <div class="taken-favourite-callout">
+            <span aria-hidden="true">♡</span>
+            <p><strong>Saving this unit for yourself?</strong><br />Please use Favourite instead. Favouriting keeps the unit available and saves it privately on this device.</p>
+          </div>
+        </div>
+        <div class="taken-confirmation-actions">
+          <button type="button" data-taken-cancel>Cancel</button>
+          <button type="button" class="favourite" data-taken-favourite ${alreadyFavourite ? 'disabled' : ''}>
+            ${alreadyFavourite ? '♥ Already favourited' : '♡ Favourite instead'}
+          </button>
+          <button type="button" class="confirm" data-taken-confirm>Yes, report taken</button>
+        </div>`;
+      document.body.appendChild(dialog);
+
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        if (dialog.open) dialog.close();
+        dialog.remove();
+        resolve(value);
+      };
+
+      dialog.querySelector('[data-taken-cancel]').addEventListener('click', () => finish('cancel'));
+      dialog.querySelector('[data-taken-confirm]').addEventListener('click', () => finish('taken'));
+      dialog.querySelector('[data-taken-favourite]')?.addEventListener('click', () => {
+        if (!alreadyFavourite && favouriteButton) favouriteButton.click();
+        finish('favourite');
+      });
+      dialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        finish('cancel');
+      });
+      dialog.addEventListener('click', event => {
+        if (event.target === dialog) finish('cancel');
+      });
+      dialog.showModal();
+    });
+  }
+
+  async function handleQuickTaken(button) {
+    const blockCode = document.getElementById('drawerBlockName')?.textContent?.trim();
+    const unitNo = document.getElementById('quickUnitTitle')?.textContent?.replace(/^#/, '').trim();
+    if (!blockCode || !unitNo) return;
+
+    const action = await confirmTakenReport(blockCode, unitNo);
+    if (action === 'favourite') {
+      setQuickFeedback('Saved to favourites · unit status was not changed.');
+      return;
+    }
+    if (action !== 'taken') {
+      setQuickFeedback('No change made.');
+      return;
+    }
+
+    // Re-fire the existing app.js Taken action exactly once.
+    bypassTakenConfirmation = true;
+    button.click();
+  }
+
+  // Capture phase lets the guardrails step in before app.js one-tap handlers.
+  document.addEventListener('click', event => {
+    const taken = event.target.closest('#quickTakenBtn');
+    if (!taken) return;
+    if (bypassTakenConfirmation) {
+      bypassTakenConfirmation = false;
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    handleQuickTaken(taken);
+  }, true);
+
   document.addEventListener('click', event => {
     const available = event.target.closest('#quickAvailableBtn');
     if (!available) return;
@@ -241,6 +335,48 @@
     event.preventDefault();
     event.stopImmediatePropagation();
     handleUnitForm(form);
+  }, true);
+
+  // ---------- Quick Update > My Booking backspace fix ----------
+  // The base formatter turns 12-10 back into 01-210 while deleting.
+  // Intercept backward deletion so partial values remain editable: 12-105 -> 12-10 -> 12-1 -> 12 -> 1.
+  document.addEventListener('beforeinput', event => {
+    const input = event.target?.closest?.('#qumBookingUnitInput');
+    if (!input || event.inputType !== 'deleteContentBackward') return;
+
+    event.preventDefault();
+
+    const value = input.value || '';
+    let start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
+    let end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+    let next;
+    let caret;
+
+    if (start !== end) {
+      next = value.slice(0, start) + value.slice(end);
+      caret = start;
+    } else if (start > 0) {
+      next = value.slice(0, start - 1) + value.slice(end);
+      caret = start - 1;
+    } else {
+      return;
+    }
+
+    // Don't leave a dangling dash after the stack digits have been deleted.
+    if (next.endsWith('-')) {
+      next = next.slice(0, -1);
+      caret = Math.min(caret, next.length);
+    }
+
+    input.value = next;
+    try { input.setSelectionRange(caret, caret); } catch (_) {}
+
+    const host = document.getElementById('qumBookingMatch');
+    if (host) {
+      host.innerHTML = next
+        ? `<div class="qum-booking-placeholder"><strong>Keep typing the unit number</strong><span>Backspace now edits normally.</span></div>`
+        : `<div class="qum-booking-placeholder"><strong>Enter your booked unit</strong><span>Choose the block above, then type the unit number.</span></div>`;
+    }
   }, true);
 
   // ---------- My Booking favourite heart ----------
